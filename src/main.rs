@@ -1,4 +1,5 @@
 mod notifier;
+mod secrets;
 
 
 use std::sync::{Barrier, LazyLock};
