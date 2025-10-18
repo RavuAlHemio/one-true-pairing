@@ -1,28 +1,34 @@
 mod notifier;
 
 
+use std::sync::{Barrier, LazyLock};
 use std::time::Duration;
 
 use zbus;
 
-use crate::notifier::TrayIcon;
+use crate::notifier::{ContextMenu, TrayIcon};
 use crate::notifier::proxies::StatusNotifierWatcherProxy;
 
 
 const TRAY_ICON_BUS_PATH: &str = "/StatusNotifierItem";
+const MENU_BUS_PATH: &str = "/SniMenu";
+static STOPPER: LazyLock<Barrier> = LazyLock::new(|| Barrier::new(2));
 
 
 #[tokio::main]
 async fn main() {
     eprintln!("I have been assigned PID {}", std::process::id());
 
-    // introduce the notifier icon
+    // introduce the notifier icon and menu
     let icon = TrayIcon;
+    let menu = ContextMenu;
 
     // connect to and register with the session bus
     eprintln!("connecting to D-Bus");
     let dbus_conn = zbus::connection::Builder::session()
         .expect("failed to create connection to D-Bus session bus")
+        .serve_at(MENU_BUS_PATH, menu)
+        .expect("failed to serve menu via D-Bus")
         .serve_at(TRAY_ICON_BUS_PATH, icon)
         .expect("failed to serve tray icon via D-Bus")
         .build()
@@ -48,7 +54,6 @@ async fn main() {
     icon_host.register_status_notifier_item(dbus_name.to_owned())
         .await.expect("failed to register icon");
 
-    loop {
-        std::thread::sleep(Duration::from_secs(5));
-    }
+    STOPPER.wait();
+    eprintln!("stopper passed");
 }
