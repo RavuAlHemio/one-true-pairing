@@ -1,3 +1,5 @@
+use std::fmt::{self, Debug};
+
 use aes::{Aes128, cipher::{BlockDecryptMut, block_padding::Pkcs7}};
 use cbc::{Decryptor, cipher::KeyIvInit};
 use crypto_bigint::Uint;
@@ -9,7 +11,7 @@ use zeroize::Zeroizing;
 use crate::secrets::dh::{DhPrivateKey, DhPublicKey, DiffieHellman};
 
 
-pub trait CryptoAlgorithm {
+pub trait CryptoAlgorithm : Debug + Send + Sync {
     /// Obtains the name of the cryptographic algorithm.
     ///
     /// This name is passed to
@@ -39,6 +41,7 @@ pub trait CryptoAlgorithm {
 
 
 /// The "plain" crypto algorithm, providing no encryption.
+#[derive(Debug)]
 pub struct PlainCrypto;
 impl PlainCrypto {
     pub fn new() -> Self {
@@ -104,6 +107,12 @@ impl DhIetf1024Sha256Aes128CbcPkcs7Crypto {
             pubkey,
             aes_key: None,
         }
+    }
+}
+impl Debug for DhIetf1024Sha256Aes128CbcPkcs7Crypto {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("DhIetf1024Sha256Aes128CbcPkcs7Crypto")
+            .finish_non_exhaustive()
     }
 }
 impl CryptoAlgorithm for DhIetf1024Sha256Aes128CbcPkcs7Crypto {

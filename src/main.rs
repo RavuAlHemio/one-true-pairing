@@ -1,8 +1,9 @@
 mod notifier;
 mod secrets;
+mod totp;
 
 
-use std::sync::{Barrier, LazyLock};
+use std::sync::{Arc, Barrier, LazyLock, OnceLock};
 
 use zbus;
 
@@ -14,6 +15,8 @@ use crate::secrets::SecretSession;
 const TRAY_ICON_BUS_PATH: &str = "/StatusNotifierItem";
 const MENU_BUS_PATH: &str = "/SniMenu";
 static STOPPER: LazyLock<Barrier> = LazyLock::new(|| Barrier::new(2));
+static DBUS_CONNECTION: OnceLock<Arc<zbus::Connection>> = OnceLock::new();
+static SECRET_SESSION: OnceLock<SecretSession> = OnceLock::new();
 
 
 #[tokio::main]
@@ -22,22 +25,28 @@ async fn main() {
 
     // connect to the session bus
     eprintln!("connecting to D-Bus");
-    let dbus_conn = zbus::connection::Builder::session()
+    let dbus_conn_inner = zbus::connection::Builder::session()
         .expect("failed to create connection to D-Bus session bus")
         .build()
         .await.expect("failed to build a D-Bus connection");
+    let dbus_conn = Arc::new(dbus_conn_inner);
+    DBUS_CONNECTION.set(Arc::clone(&dbus_conn))
+        .expect("connection already set?!");
 
     // connect to a secret manager and list the secrets
-    eprintln!("connecting to a secret manager");
-    let secret_session = SecretSession::new(&dbus_conn).await;
+    eprintln!("querying secret manager");
+    let secret_session = SecretSession::new(Arc::clone(&dbus_conn)).await;
     let secret_name_to_path = secret_session.get_secrets().await;
+    SECRET_SESSION
+        .set(secret_session).expect("SECRET_SESSION already set?!");
 
     // introduce the notifier icon and menu
     let icon = TrayIcon;
     let menu = ContextMenu::new(secret_name_to_path);
 
     // register them with the session bus
-    let object_server = dbus_conn.object_server();
+    let object_server = dbus_conn
+        .object_server();
     object_server
         .at(MENU_BUS_PATH, menu)
         .await.expect("failed to serve menu via D-Bus");

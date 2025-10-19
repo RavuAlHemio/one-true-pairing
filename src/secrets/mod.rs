@@ -4,22 +4,25 @@ mod proxies;
 
 
 use std::collections::{BTreeMap, HashMap};
+use std::sync::Arc;
 
 use zbus::Connection;
 use zbus::zvariant::{ObjectPath, OwnedObjectPath};
+use zeroize::Zeroizing;
 
 use crate::secrets::crypto::{CryptoAlgorithm, DhIetf1024Sha256Aes128CbcPkcs7Crypto, PlainCrypto};
-use crate::secrets::proxies::{CollectionProxy, ItemProxy, ServiceProxy, SessionProxy};
+use crate::secrets::proxies::{CollectionProxy, ItemProxy, ServiceProxy};
 
 
-pub struct SecretSession<'a> {
-    service_proxy: ServiceProxy<'a>,
+#[derive(Debug)]
+pub struct SecretSession {
+    connection: Arc<Connection>,
     algo: Box<dyn CryptoAlgorithm>,
-    session_proxy: SessionProxy<'a>,
+    session_path: OwnedObjectPath,
 }
-impl<'a> SecretSession<'a> {
-    pub async fn new(conn: &'a Connection) -> Self {
-        let service_proxy = ServiceProxy::new(conn)
+impl SecretSession {
+    pub async fn new(conn: Arc<Connection>) -> Self {
+        let service_proxy = ServiceProxy::new(&*conn)
             .await.expect("failed to connect to secrets service");
 
         // try stronger algorithms first
@@ -52,22 +55,17 @@ impl<'a> SecretSession<'a> {
         let (session_path, algo) = session_algo_opt
             .expect("no supported algorithm found");
 
-        let session_proxy = SessionProxy::new(
-            conn,
-            session_path,
-        ).await.expect("failed to create session proxy");
         Self {
-            service_proxy,
+            connection: conn,
             algo,
-            session_proxy,
+            session_path,
         }
     }
 
     pub async fn get_secrets(&self) -> BTreeMap<String, OwnedObjectPath> {
         // TODO: make the choice of keyring configurable
-        let conn = self.service_proxy.inner().connection();
         let collection = CollectionProxy::new(
-            conn,
+            &self.connection,
             ObjectPath::from_static_str("/org/freedesktop/secrets/collection/Default_5fkeyring").unwrap(),
         ).await.expect("failed to connect to default keyring");
         let mut attributes = HashMap::new();
@@ -82,12 +80,22 @@ impl<'a> SecretSession<'a> {
         for item_path in item_paths {
             // ask for its name
             let Ok(item_proxy) = ItemProxy::new(
-                conn,
+                &self.connection,
                 &item_path,
             ).await else { continue };
             let Ok(name) = item_proxy.label().await else { continue };
             name_to_path.insert(name, item_path);
         }
         name_to_path
+    }
+
+    pub async fn get_secret(&self, item_path: ObjectPath<'_>) -> Zeroizing<Vec<u8>> {
+        let item_proxy = ItemProxy::new(&self.connection, item_path)
+            .await.expect("failed to obtain item proxy");
+        let session_path_copy = self.session_path.clone();
+        let returned_secret = item_proxy.get_secret(session_path_copy.into())
+            .await.expect("failed to obtain secret from item");
+        self.algo.decode_secret(&returned_secret.parameters, &returned_secret.value)
+            .expect("failed to decode secret")
     }
 }

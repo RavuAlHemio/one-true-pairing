@@ -13,6 +13,8 @@ use serde::{Deserialize, Serialize};
 use zbus::object_server::SignalEmitter;
 use zbus::zvariant::{OwnedObjectPath, OwnedValue, Str, Type, Value};
 
+use crate::totp::{self, TotpParameters};
+
 
 const MENU_SEPARATOR_ID: i32 = 0x7FFF_FFFE;
 const MENU_EXIT_ID: i32 = 0x7FFF_FFFF;
@@ -353,8 +355,56 @@ impl ContextMenu {
                 crate::STOPPER.wait();
                 eprintln!("stopper triggered");
             },
-            _ => {
-                // TODO: find entry by index
+            index => {
+                let actual_index: usize = match (index - 1).try_into() {
+                    Ok(ai) => ai,
+                    Err(_) => {
+                        eprintln!("cannot convert menu item ID {} to secret index", index);
+                        return Ok(());
+                    },
+                };
+                let Some(secret_path) = self.secret_name_to_path
+                    .values()
+                    .nth(actual_index)
+                    else {
+                        eprintln!("secret with index {} out of range", actual_index);
+                        return Ok(());
+                    };
+                let secret_session = crate::SECRET_SESSION
+                    .get().expect("SECRET_SESSION unset?!");
+                let secret = secret_session
+                    .get_secret(secret_path.clone().into()).await;
+                let secret_str = std::str::from_utf8(secret.as_slice())
+                    .expect("secret is not valid UTF-8");
+                let Some(params) = TotpParameters::try_from_otpauth_url(secret_str)
+                    else {
+                        eprintln!("TOTP parameters could not be parsed");
+                        return Ok(());
+                    };
+                let algorithm_name = match &params.algorithm {
+                    Some(a) => a.as_str(),
+                    None => TotpParameters::DEFAULT_ALGORITHM,
+                };
+                let algorithm = match algorithm_name {
+                    "SHA1" => totp::Algorithm::Sha1,
+                    "SHA256" => totp::Algorithm::Sha256,
+                    "SHA512" => totp::Algorithm::Sha512,
+                    _ => {
+                        eprintln!("unknown TOTP algorithm {:?}", algorithm_name);
+                        return Ok(());
+                    }
+                };
+                let period_s = params.period_seconds
+                    .unwrap_or(TotpParameters::DEFAULT_PERIOD_SECONDS);
+                let digits = params.digits
+                    .unwrap_or(TotpParameters::DEFAULT_DIGITS);
+                let otp_code = totp::totp_now(
+                    algorithm,
+                    &params.key,
+                    period_s,
+                    digits,
+                );
+
                 // TODO: generate OTP code
                 // TODO: provide code via clipboard
             },
@@ -412,6 +462,7 @@ pub enum ItemCategory {
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, OwnedValue, PartialEq, PartialOrd, Serialize, Type, Value)]
 #[zvariant(signature = "s", rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case")]
 pub enum MenuStatus {
     Normal,
     Notice,
@@ -445,6 +496,7 @@ pub struct MenuLayout {
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, OwnedValue, PartialEq, PartialOrd, Serialize, Type, Value)]
 #[zvariant(signature = "s", rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case")]
 pub enum MenuEvent {
     Clicked,
     Hovered,
