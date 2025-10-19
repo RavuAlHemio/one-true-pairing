@@ -7,7 +7,7 @@
 pub(crate) mod proxies;
 
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use serde::{Deserialize, Serialize};
 use zbus::object_server::SignalEmitter;
@@ -129,23 +129,27 @@ impl TrayIcon {
     }
 
     async fn context_menu(&self, x: i32, y: i32) -> Result<(), zbus::fdo::Error> {
+        let _ = (x, y);
         eprintln!("WARNING: context menu triggered when the notification icon tray should show our D-Bus-published menu instead -- is your notification tray lacking a menu implementation?");
         Ok(())
     }
 
     async fn activate(&self, x: i32, y: i32) -> Result<(), zbus::fdo::Error> {
         // this shouldn't happen because we declared ourselves a menu
+        let _ = (x, y);
         eprintln!("activated when the notification icon tray should show our D-Bus-published menu instead -- is your notification tray lacking a menu implementation?");
         Ok(())
     }
 
     async fn secondary_activate(&self, x: i32, y: i32) -> Result<(), zbus::fdo::Error> {
         // ignore
+        let _ = (x, y);
         Ok(())
     }
 
     async fn scroll(&self, delta: i32, orientation: String) -> Result<(), zbus::fdo::Error> {
         // ignore
+        let _ = (delta, orientation);
         Ok(())
     }
 
@@ -168,9 +172,16 @@ impl TrayIcon {
     async fn new_status<'e>(emitter: &SignalEmitter<'e>, status: ItemStatus) -> Result<(), zbus::Error>;
 }
 
-pub(crate) struct ContextMenu;
-
+pub(crate) struct ContextMenu {
+    secret_name_to_path: BTreeMap<String, OwnedObjectPath>,
+}
 impl ContextMenu {
+    pub fn new(secret_name_to_path: BTreeMap<String, OwnedObjectPath>) -> Self {
+        Self {
+            secret_name_to_path,
+        }
+    }
+
     fn obtain_layout_structure(&self, property_names: &[String]) -> MenuLayout {
         fn want(property_names: &[String], key: &str) -> bool {
             property_names.is_empty() || property_names.iter().any(|pn| pn == key)
@@ -184,14 +195,11 @@ impl ContextMenu {
             );
         }
 
-        let menu_entries: Vec<OwnedValue> = vec![
-            MenuLayout {
-                id: MENU_SEPARATOR_ID,
-                properties: separator_props.clone(),
-                children: Vec::with_capacity(0),
-            }.try_into().unwrap(),
-            MenuLayout {
-                id: MENU_EXIT_ID,
+        let mut menu_entries: Vec<OwnedValue> = Vec::with_capacity(self.secret_name_to_path.len() + 2);
+        for (i, secret_name) in self.secret_name_to_path.keys().enumerate() {
+            let i_i32 = i32::try_from(i).unwrap();
+            menu_entries.push(MenuLayout {
+                id: i_i32.checked_add(1).unwrap(),
                 properties: {
                     let mut props = HashMap::new();
                     if want(&property_names, "type") {
@@ -203,14 +211,39 @@ impl ContextMenu {
                     if want(&property_names, "label") {
                         props.insert(
                             "label".to_owned(),
-                            Str::from("E_xit").into(),
+                            Str::from(secret_name).into(),
                         );
                     }
                     props
                 },
                 children: Vec::with_capacity(0),
-            }.try_into().unwrap(),
-        ];
+            }.try_into().unwrap());
+        }
+        menu_entries.push(MenuLayout {
+            id: MENU_SEPARATOR_ID,
+            properties: separator_props.clone(),
+            children: Vec::with_capacity(0),
+        }.try_into().unwrap());
+        menu_entries.push(MenuLayout {
+            id: MENU_EXIT_ID,
+            properties: {
+                let mut props = HashMap::new();
+                if want(&property_names, "type") {
+                    props.insert(
+                        "type".to_owned(),
+                        Str::from("standard").into(),
+                    );
+                }
+                if want(&property_names, "label") {
+                    props.insert(
+                        "label".to_owned(),
+                        Str::from("E_xit").into(),
+                    );
+                }
+                props
+            },
+            children: Vec::with_capacity(0),
+        }.try_into().unwrap());
 
         MenuLayout {
             id: 0,
@@ -267,6 +300,7 @@ impl ContextMenu {
     }
 
     async fn get_layout(&self, parent_id: i32, recursion_depth: i32, property_names: Vec<String>) -> Result<(u32, MenuLayout), zbus::fdo::Error> {
+        let _ = recursion_depth;
         if parent_id != 0 {
             // return an empty menu
             return Ok((
@@ -305,6 +339,7 @@ impl ContextMenu {
 
     /// This is called by the applet to notify the application an event happened on a menu item.
     async fn event(&self, id: i32, event_id: MenuEvent, data: OwnedValue, timestamp: u32) -> Result<(), zbus::fdo::Error> {
+        let _ = (data, timestamp);
         if event_id != MenuEvent::Clicked {
             return Ok(());
         }
@@ -333,6 +368,7 @@ impl ContextMenu {
     ///
     /// The return value indicates if the menu should be updated first.
     async fn about_to_show(&self, id: i32) -> Result<bool, zbus::fdo::Error> {
+        let _ = id;
         Ok(false)
     }
 
@@ -375,8 +411,7 @@ pub enum ItemCategory {
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, OwnedValue, PartialEq, PartialOrd, Serialize, Type, Value)]
-#[zvariant(signature = "s")]
-#[serde(rename_all = "kebab-case")]
+#[zvariant(signature = "s", rename_all = "kebab-case")]
 pub enum MenuStatus {
     Normal,
     Notice,
@@ -409,8 +444,7 @@ pub struct MenuLayout {
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, OwnedValue, PartialEq, PartialOrd, Serialize, Type, Value)]
-#[zvariant(signature = "s")]
-#[serde(rename_all = "kebab-case")]
+#[zvariant(signature = "s", rename_all = "kebab-case")]
 pub enum MenuEvent {
     Clicked,
     Hovered,

@@ -3,12 +3,12 @@ mod secrets;
 
 
 use std::sync::{Barrier, LazyLock};
-use std::time::Duration;
 
 use zbus;
 
 use crate::notifier::{ContextMenu, TrayIcon};
 use crate::notifier::proxies::StatusNotifierWatcherProxy;
+use crate::secrets::SecretSession;
 
 
 const TRAY_ICON_BUS_PATH: &str = "/StatusNotifierItem";
@@ -20,20 +20,30 @@ static STOPPER: LazyLock<Barrier> = LazyLock::new(|| Barrier::new(2));
 async fn main() {
     eprintln!("I have been assigned PID {}", std::process::id());
 
-    // introduce the notifier icon and menu
-    let icon = TrayIcon;
-    let menu = ContextMenu;
-
-    // connect to and register with the session bus
+    // connect to the session bus
     eprintln!("connecting to D-Bus");
     let dbus_conn = zbus::connection::Builder::session()
         .expect("failed to create connection to D-Bus session bus")
-        .serve_at(MENU_BUS_PATH, menu)
-        .expect("failed to serve menu via D-Bus")
-        .serve_at(TRAY_ICON_BUS_PATH, icon)
-        .expect("failed to serve tray icon via D-Bus")
         .build()
         .await.expect("failed to build a D-Bus connection");
+
+    // connect to a secret manager and list the secrets
+    eprintln!("connecting to a secret manager");
+    let secret_session = SecretSession::new(&dbus_conn).await;
+    let secret_name_to_path = secret_session.get_secrets().await;
+
+    // introduce the notifier icon and menu
+    let icon = TrayIcon;
+    let menu = ContextMenu::new(secret_name_to_path);
+
+    // register them with the session bus
+    let object_server = dbus_conn.object_server();
+    object_server
+        .at(MENU_BUS_PATH, menu)
+        .await.expect("failed to serve menu via D-Bus");
+    object_server
+        .at(TRAY_ICON_BUS_PATH, icon)
+        .await.expect("failed to serve icon via D-Bus");
     let dbus_name: &str = &*dbus_conn.unique_name()
         .expect("failed to obtain unique name from D-Bus connection");
 
