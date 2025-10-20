@@ -1,6 +1,7 @@
 mod notifier;
 mod secrets;
 mod totp;
+mod wayland;
 
 
 use std::sync::{Arc, Barrier, LazyLock, OnceLock};
