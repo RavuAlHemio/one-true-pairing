@@ -1,3 +1,4 @@
+use std::ffi::c_void;
 use std::fmt;
 use std::io;
 use std::mem::{size_of, size_of_val};
@@ -5,8 +6,12 @@ use std::num::NonZero;
 use std::os::fd::{AsRawFd, RawFd};
 use std::ptr::null_mut;
 
-use libc::{cmsghdr, iovec, msghdr, SCM_RIGHTS, sendmsg, SOL_SOCKET};
-use tokio::io::{AsyncWriteExt, Interest};
+use libc::CMSG_DATA;
+use libc::CMSG_FIRSTHDR;
+use libc::CMSG_LEN;
+use libc::CMSG_SPACE;
+use libc::{cmsghdr, iovec, msghdr, recvmsg, SCM_RIGHTS, sendmsg, SOL_SOCKET};
+use tokio::io::Interest;
 use tokio::net::UnixStream;
 
 use crate::wayland::fixed::Fixed;
@@ -16,6 +21,7 @@ use crate::wayland::fixed::Fixed;
 pub enum Error {
     Io(std::io::Error),
     TooLong { actual: usize, maximum: usize },
+    TooShort { actual: usize, minimum: usize },
 }
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -24,6 +30,8 @@ impl fmt::Display for Error {
                 => write!(f, "I/O error: {}", e),
             Self::TooLong { actual, maximum }
                 => write!(f, "packet too long ({} bytes > maximum {} bytes)", actual, maximum),
+            Self::TooShort { actual, minimum }
+                => write!(f, "packet too short ({} bytes < minimum {} bytes)", actual, minimum),
         }
     }
 }
@@ -32,6 +40,7 @@ impl std::error::Error for Error {
         match self {
             Self::Io(e) => Some(e),
             Self::TooLong { .. } => None,
+            Self::TooShort { .. } => None,
         }
     }
 }
@@ -40,14 +49,14 @@ impl From<std::io::Error> for Error {
 }
 
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct WaylandPacket {
+pub struct Packet {
     object_id: u32,
     // top_size_bytes_bottom_opcode: u32
     opcode: u16, // merged with size in protocol
     payload: Vec<u8>,
     fds: Vec<RawFd>,
 }
-impl WaylandPacket {
+impl Packet {
     pub fn new(
         object_id: u32,
         opcode: u16,
@@ -132,58 +141,63 @@ impl WaylandPacket {
         Ok(buf)
     }
 
-    pub async fn send(&self, socket: &mut UnixStream) -> Result<(), Error> {
+    pub async fn send(&self, socket: &UnixStream) -> Result<(), Error> {
         let mut buf = self.serialize()?;
 
-        if self.fds.len() == 0 {
-            socket.write(&buf).await?;
-        } else {
-            // well, this won't be easy
+        // we could use the Rust-only happy path if we have no file descriptors to send
+        // it's probably better for debugging if there is only one code path though
 
-            // assemble the "additional stuff" structure
-            let add_stuff_header_len = size_of::<cmsghdr>();
-            let add_stuff_payload_len = self.fds.len() * size_of::<RawFd>();
-            let add_stuff_len = add_stuff_header_len + add_stuff_payload_len;
-            let mut add_stuff_buf = vec![0u8; add_stuff_len];
-            let header = cmsghdr {
-                cmsg_len: add_stuff_len,
-                cmsg_level: SOL_SOCKET,
-                cmsg_type: SCM_RIGHTS,
-            };
-            unsafe {
-                write_val_as_bytes(
-                    &header,
-                    &mut add_stuff_buf[..add_stuff_header_len],
-                );
-                write_slice_as_bytes(
-                    self.fds.as_slice(),
-                    &mut add_stuff_buf[add_stuff_header_len..],
-                );
-            }
+        // assemble the general message structure including the buffer for "additional stuff"
+        let add_stuff_payload_len = self.fds.len() * size_of::<RawFd>();
+        let add_stuff_len: usize = unsafe {
+            CMSG_SPACE(
+                add_stuff_payload_len.try_into().unwrap()
+            ).try_into().unwrap()
+        };
+        let mut add_stuff_buf = vec![0u8; add_stuff_len];
+        let mut iov = iovec {
+            iov_base: buf.as_mut_ptr() as *mut c_void,
+            iov_len: buf.len(),
+        };
+        let add_struct = msghdr {
+            msg_name: null_mut(),
+            msg_namelen: 0,
+            msg_iov: &mut iov,
+            msg_iovlen: 1,
+            msg_control: add_stuff_buf.as_mut_ptr() as *mut c_void,
+            msg_controllen: add_stuff_len,
+            msg_flags: 0,
+        };
 
-            // collect it in the struct
-            let mut iov = iovec {
-                iov_base: buf.as_mut_ptr() as *mut _,
-                iov_len: buf.len(),
-            };
-            let add_struct = msghdr {
-                msg_name: null_mut(),
-                msg_namelen: 0,
-                msg_iov: &mut iov,
-                msg_iovlen: 1,
-                msg_control: add_stuff_buf.as_mut_ptr() as *mut _,
-                msg_controllen: add_stuff_len,
-                msg_flags: 0,
-            };
+        unsafe {
+            // get the header of the first additional-stuff value
+            let add_first_header = CMSG_FIRSTHDR(&add_struct);
 
+            // populate it
+            (*add_first_header).cmsg_level = SOL_SOCKET;
+            (*add_first_header).cmsg_type = SCM_RIGHTS;
+            (*add_first_header).cmsg_len = CMSG_LEN(
+                add_stuff_payload_len.try_into().unwrap()
+            ).try_into().unwrap();
+
+            // get the location of its data and write the FDs
+            let data_ptr = CMSG_DATA(add_first_header);
+            let data_ptr_slice = std::slice::from_raw_parts_mut(data_ptr, add_stuff_payload_len);
+            write_slice_as_bytes(
+                self.fds.as_slice(),
+                data_ptr_slice,
+            );
+        }
+
+        // grab the file descriptor
+        let fd: RawFd = socket.as_raw_fd();
+
+        // send first chunk (including file descriptors)
+        let mut total_sent = loop {
             // wait until we are ready to send
             socket.writable().await?;
 
-            // grab the file descriptor
-            let fd: RawFd = socket.as_raw_fd();
-
-            // blammo
-            socket.try_io(
+            let send_res: Result<usize, io::Error> = socket.try_io(
                 Interest::WRITABLE,
                 || {
                     let sent = unsafe {
@@ -192,13 +206,94 @@ impl WaylandPacket {
                     if sent == -1 {
                         Err(io::Error::last_os_error())
                     } else {
-                        Ok(())
+                        Ok(sent.try_into().unwrap())
                     }
                 },
-            )?;
+            );
+            match send_res {
+                Ok(n) => break n,
+                Err(e) if e.kind() == io::ErrorKind::WouldBlock => {
+                    // try again
+                    continue;
+                },
+                Err(e) => return Err(e.into()),
+            }
+        };
+
+        // keep trying until we get all of it out
+        while total_sent < buf.len() {
+            // wait for readiness again
+            socket.writable().await?;
+
+            let now_sent = match socket.try_write(&buf[total_sent..]) {
+                Ok(n) => n,
+                Err(e) if e.kind() == io::ErrorKind::WouldBlock => {
+                    continue;
+                },
+                Err(e) => return Err(e.into()),
+            };
+            total_sent += now_sent;
         }
 
         Ok(())
+    }
+
+    pub async fn recv(socket: &UnixStream) -> Result<Packet, Error> {
+        // start by receiving the fixed part: object ID, length and opcode
+        // as well as any FDs
+        let mut fixed_buf = [0u8; 8];
+
+        let mut iov = iovec {
+            iov_base: fixed_buf.as_mut_ptr() as *mut c_void,
+            iov_len: fixed_buf.len(),
+        };
+        // let's hope 4M is big enough for the additional stuff
+        let mut add_stuff_buf = vec![0u8; 4*1024*1024];
+        let mut msg = msghdr {
+            msg_name: null_mut(),
+            msg_namelen: 0,
+            msg_iov: &mut iov,
+            msg_iovlen: 1,
+            msg_control: add_stuff_buf.as_mut_ptr() as *mut c_void,
+            msg_controllen: add_stuff_buf.len(),
+            msg_flags: 0,
+        };
+
+        let fd = socket.as_raw_fd();
+
+        // and here we go again
+        let mut total_received = loop {
+            socket.readable().await?;
+
+            let receive_res: Result<usize, io::Error> = socket.try_io(
+                Interest::READABLE,
+                || {
+                    let received = unsafe {
+                        recvmsg(fd, &mut msg, 0)
+                    };
+                    if received == -1 {
+                        Err(io::Error::last_os_error())
+                    } else {
+                        Ok(received.try_into().unwrap())
+                    }
+                },
+            );
+            match receive_res {
+                Ok(n) => break n,
+                Err(e) if e.kind() == io::ErrorKind::WouldBlock => {
+                    // try again
+                    continue;
+                },
+                Err(e) => return Err(e.into()),
+            }
+        };
+
+        // okay, we received all the file descriptors we are going to receive
+        // find them (if there are any)
+        unsafe {
+            let first_add_header = CMSG_FIRSTHDR(&msg);
+            todo!();
+        }
     }
 }
 
