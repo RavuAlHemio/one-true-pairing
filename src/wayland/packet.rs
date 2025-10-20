@@ -1,12 +1,13 @@
 use std::ffi::c_int;
 use std::fmt;
+use std::io;
 use std::mem::{size_of, size_of_val};
 use std::num::NonZero;
 use std::os::fd::AsRawFd;
 use std::ptr::null_mut;
 
-use libc::{cmsghdr, iovec, msghdr, SCM_RIGHTS, SOL_SOCKET};
-use tokio::io::AsyncWriteExt;
+use libc::{cmsghdr, iovec, msghdr, SCM_RIGHTS, sendmsg, SOL_SOCKET};
+use tokio::io::{AsyncWriteExt, Interest};
 use tokio::net::UnixStream;
 
 use crate::wayland::fixed::Fixed;
@@ -171,6 +172,21 @@ impl WaylandPacket {
 
             // grab the file descriptor
             let fd = socket.as_raw_fd();
+
+            // blammo
+            socket.try_io(
+                Interest::WRITABLE,
+                || {
+                    let sent = unsafe {
+                        sendmsg(fd, &add_struct, 0)
+                    };
+                    if sent == -1 {
+                        Err(io::Error::last_os_error())
+                    } else {
+                        Ok(())
+                    }
+                },
+            )?;
         }
 
         Ok(())
