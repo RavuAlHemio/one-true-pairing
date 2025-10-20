@@ -1,9 +1,8 @@
-use std::ffi::c_int;
 use std::fmt;
 use std::io;
 use std::mem::{size_of, size_of_val};
 use std::num::NonZero;
-use std::os::fd::AsRawFd;
+use std::os::fd::{AsRawFd, RawFd};
 use std::ptr::null_mut;
 
 use libc::{cmsghdr, iovec, msghdr, SCM_RIGHTS, sendmsg, SOL_SOCKET};
@@ -46,7 +45,7 @@ pub struct WaylandPacket {
     // top_size_bytes_bottom_opcode: u32
     opcode: u16, // merged with size in protocol
     payload: Vec<u8>,
-    fds: Vec<c_int>,
+    fds: Vec<RawFd>,
 }
 impl WaylandPacket {
     pub fn new(
@@ -102,7 +101,7 @@ impl WaylandPacket {
         }
     }
 
-    pub fn push_fd(&mut self, fd: c_int) {
+    pub fn push_fd(&mut self, fd: RawFd) {
         self.fds.push(fd);
     }
 
@@ -111,8 +110,7 @@ impl WaylandPacket {
         self.fds.clear();
     }
 
-    pub async fn send(&self, socket: &mut UnixStream) -> Result<(), Error> {
-        // serialize
+    pub fn serialize(&self) -> Result<Vec<u8>, Error> {
         let total_bytes = 8 + self.payload.len();
         let max_size: usize = u16::MAX.into();
         if total_bytes > max_size {
@@ -131,6 +129,11 @@ impl WaylandPacket {
         buf[0..4].copy_from_slice(&self.object_id.to_ne_bytes());
         buf[4..8].copy_from_slice(&top_size_bytes_bottom_opcode.to_ne_bytes());
         buf[8..].copy_from_slice(&self.payload);
+        Ok(buf)
+    }
+
+    pub async fn send(&self, socket: &mut UnixStream) -> Result<(), Error> {
+        let mut buf = self.serialize()?;
 
         if self.fds.len() == 0 {
             socket.write(&buf).await?;
@@ -139,7 +142,7 @@ impl WaylandPacket {
 
             // assemble the "additional stuff" structure
             let add_stuff_header_len = size_of::<cmsghdr>();
-            let add_stuff_payload_len = self.fds.len() * size_of::<c_int>();
+            let add_stuff_payload_len = self.fds.len() * size_of::<RawFd>();
             let add_stuff_len = add_stuff_header_len + add_stuff_payload_len;
             let mut add_stuff_buf = vec![0u8; add_stuff_len];
             let header = cmsghdr {
@@ -148,13 +151,19 @@ impl WaylandPacket {
                 cmsg_type: SCM_RIGHTS,
             };
             unsafe {
-                write_val_as_bytes(&header, &mut add_stuff_buf[..add_stuff_header_len]);
-                write_slice_as_bytes(self.fds.as_slice(), &mut add_stuff_buf[add_stuff_header_len..]);
+                write_val_as_bytes(
+                    &header,
+                    &mut add_stuff_buf[..add_stuff_header_len],
+                );
+                write_slice_as_bytes(
+                    self.fds.as_slice(),
+                    &mut add_stuff_buf[add_stuff_header_len..],
+                );
             }
 
             // collect it in the struct
             let mut iov = iovec {
-                iov_base: buf.as_mut_ptr() as * mut _,
+                iov_base: buf.as_mut_ptr() as *mut _,
                 iov_len: buf.len(),
             };
             let add_struct = msghdr {
@@ -171,7 +180,7 @@ impl WaylandPacket {
             socket.writable().await?;
 
             // grab the file descriptor
-            let fd = socket.as_raw_fd();
+            let fd: RawFd = socket.as_raw_fd();
 
             // blammo
             socket.try_io(
