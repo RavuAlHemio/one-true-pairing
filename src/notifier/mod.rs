@@ -352,7 +352,9 @@ impl ContextMenu {
             },
             MENU_EXIT_ID => {
                 // the fun is over; trigger the stopper
-                crate::STOPPER.wait();
+                crate::STOPPER
+                    .get().expect("STOPPER unset?!")
+                    .cancel();
                 eprintln!("stopper triggered");
             },
             index => {
@@ -370,10 +372,13 @@ impl ContextMenu {
                         eprintln!("secret with index {} out of range", actual_index);
                         return Ok(());
                     };
-                let secret_session = crate::SECRET_SESSION
-                    .get().expect("SECRET_SESSION unset?!");
-                let secret = secret_session
-                    .get_secret(secret_path.clone().into()).await;
+                let secret = {
+                    let secret_session = crate::SECRET_SESSION
+                        .get().expect("SECRET_SESSION unset?!")
+                        .read().await;
+                    secret_session
+                        .get_secret(secret_path.clone().into()).await
+                };
                 let secret_str = std::str::from_utf8(secret.as_slice())
                     .expect("secret is not valid UTF-8");
                 let Some(params) = TotpParameters::try_from_otpauth_url(secret_str)
