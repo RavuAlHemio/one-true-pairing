@@ -5,6 +5,11 @@ pub struct Fixed {
 }
 impl Fixed {
     pub const fn inner_value(&self) -> i32 { self.inner_value }
+    pub const fn from_inner_value(inner_value: i32) -> Self {
+        Self {
+            inner_value,
+        }
+    }
 }
 
 macro_rules! impl_from_int {

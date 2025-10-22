@@ -113,4 +113,101 @@ impl Packet {
     }
 
     pub fn fds(&self) -> &[RawFd] { &self.fds }
+
+    pub fn read(&self) -> PacketReader<'_> {
+        PacketReader {
+            packet: self,
+            payload_pos: 0,
+            fd_pos: 0,
+        }
+    }
+}
+
+pub struct PacketReader<'a> {
+    packet: &'a Packet,
+    payload_pos: usize,
+    fd_pos: usize,
+}
+impl<'a> PacketReader<'a> {
+    fn peek_bytes(&mut self, buf: &mut [u8]) -> Result<(), Error> {
+        if self.payload_pos + buf.len() > self.packet.payload.len() {
+            Err(Error::FieldOutOfBounds {
+                actual: self.payload_pos + 4,
+                maximum: self.packet.payload.len(),
+            })
+        } else {
+            buf.copy_from_slice(
+                &self.packet.payload[self.payload_pos..self.payload_pos+buf.len()]
+            );
+            Ok(())
+        }
+    }
+
+    pub fn read_uint(&mut self) -> Result<u32, Error> {
+        let mut buf = [0u8; 4];
+        self.peek_bytes(&mut buf)?;
+        self.payload_pos += 4;
+        Ok(u32::from_ne_bytes(buf))
+    }
+
+    pub fn read_int(&mut self) -> Result<i32, Error> {
+        let mut buf = [0u8; 4];
+        self.peek_bytes(&mut buf)?;
+        self.payload_pos += 4;
+        Ok(i32::from_ne_bytes(buf))
+    }
+
+    pub fn read_fixed(&mut self) -> Result<Fixed, Error> {
+        let mut buf = [0u8; 4];
+        self.peek_bytes(&mut buf)?;
+        self.payload_pos += 4;
+        Ok(Fixed::from_inner_value(i32::from_ne_bytes(buf)))
+    }
+
+    pub fn read_str(&mut self) -> Result<String, Error> {
+        let mut len_buf = [0u8; 4];
+        self.peek_bytes(&mut len_buf)?;
+        let len_u32 = u32::from_ne_bytes(len_buf);
+        let len: usize = len_u32.try_into().unwrap();
+        let len_padded = (4 - (len % 4)) % 4;
+
+        if self.payload_pos + 4 + len_padded > self.packet.payload.len() {
+            return Err(Error::FieldOutOfBounds {
+                actual: self.payload_pos + 4 + len_padded,
+                maximum: self.packet.payload.len(),
+            });
+        }
+
+        self.payload_pos += 4;
+        let string_slice = &self.packet.payload[self.payload_pos..self.payload_pos+len];
+        self.payload_pos += len_padded;
+
+        let nul_pos = string_slice.iter().position(|b| *b == 0x00);
+        if nul_pos != Some(string_slice.len() - 1) {
+            return Err(Error::StringMisplacedNul {
+                actual: nul_pos,
+                expected: string_slice.len() - 1,
+            });
+        }
+        let no_nul_string_slice = &string_slice[..string_slice.len()-1];
+
+        let stringy = std::str::from_utf8(no_nul_string_slice)
+            .map_err(|_| Error::StringInvalidUtf8 { data: no_nul_string_slice.to_vec() })?;
+        Ok(stringy.to_owned())
+    }
+
+    pub fn read_object(&mut self) -> Result<Option<NonZero<u32>>, Error> {
+        let oid = self.read_uint()?;
+        Ok(NonZero::new(oid))
+    }
+
+    pub fn read_fd(&mut self) -> Result<RawFd, Error> {
+        if self.fd_pos >= self.packet.fds.len() {
+            Err(Error::FdOutOfBounds { total: self.packet.fds.len() })
+        } else {
+            let fd = self.packet.fds[self.fd_pos];
+            self.fd_pos += 1;
+            Ok(fd)
+        }
+    }
 }
