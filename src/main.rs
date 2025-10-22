@@ -1,5 +1,6 @@
 mod notifier;
 mod secrets;
+mod socket_fd_ext;
 mod totp;
 mod wayland;
 
@@ -59,8 +60,8 @@ async fn main() {
 
     // connect to Wayland
     eprintln!("connecting to Wayland");
-    let way_conn = wayland_client::Connection::connect_to_env()
-        .expect("failed to create connection to Wayland server");
+    let way_conn = crate::wayland::Connection::new_from_env()
+        .await.expect("failed to create connection to Wayland server");
 
     // find a tray icon host
     eprintln!("poking at the icon host");
