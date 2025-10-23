@@ -210,4 +210,20 @@ impl<'a> PacketReader<'a> {
             Ok(fd)
         }
     }
+
+    pub fn finish(&self) -> Result<(), Error> {
+        let all_read =
+            self.payload_pos >= self.packet.payload.len()
+            && self.fd_pos >= self.packet.fds.len();
+        if all_read {
+            Ok(())
+        } else {
+            Err(Error::IncompleteRead {
+                read_bytes: self.payload_pos,
+                total_bytes: self.packet.payload.len(),
+                read_fds: self.fd_pos,
+                total_fds: self.packet.fds.len(),
+            })
+        }
+    }
 }

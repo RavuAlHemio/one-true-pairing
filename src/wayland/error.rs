@@ -12,6 +12,7 @@ pub enum Error {
     FdOutOfBounds { total: usize },
     StringMisplacedNul { actual: Option<usize>, expected: usize },
     StringInvalidUtf8 { data: Vec<u8> },
+    IncompleteRead { read_bytes: usize, total_bytes: usize, read_fds: usize, total_fds: usize },
 }
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -32,6 +33,8 @@ impl fmt::Display for Error {
                 => write!(f, "the string's NUL termination is misplaced (actual {:?}, expected {})", actual, expected),
             Self::StringInvalidUtf8 { data }
                 => write!(f, "string is invalid UTF-8: {:?}", data),
+            Self::IncompleteRead { read_bytes, total_bytes, read_fds, total_fds }
+                => write!(f, "incomplete read ({}/{} bytes, {}/{} file descriptors", read_bytes, total_bytes, read_fds, total_fds),
         }
     }
 }
@@ -46,6 +49,7 @@ impl std::error::Error for Error {
             Self::FdOutOfBounds { .. } => None,
             Self::StringMisplacedNul { .. } => None,
             Self::StringInvalidUtf8 { .. } => None,
+            Self::IncompleteRead { .. } => None,
         }
     }
 }
