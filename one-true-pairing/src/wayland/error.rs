@@ -13,6 +13,7 @@ pub enum Error {
     StringMisplacedNul { actual: Option<usize>, expected: usize },
     StringInvalidUtf8 { data: Vec<u8> },
     IncompleteRead { read_bytes: usize, total_bytes: usize, read_fds: usize, total_fds: usize },
+    ZeroObjectId,
 }
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -35,6 +36,8 @@ impl fmt::Display for Error {
                 => write!(f, "string is invalid UTF-8: {:?}", data),
             Self::IncompleteRead { read_bytes, total_bytes, read_fds, total_fds }
                 => write!(f, "incomplete read ({}/{} bytes, {}/{} file descriptors", read_bytes, total_bytes, read_fds, total_fds),
+            Self::ZeroObjectId
+                => write!(f, "object ID was zero where a concrete object ID was expected"),
         }
     }
 }
@@ -50,6 +53,7 @@ impl std::error::Error for Error {
             Self::StringMisplacedNul { .. } => None,
             Self::StringInvalidUtf8 { .. } => None,
             Self::IncompleteRead { .. } => None,
+            Self::ZeroObjectId => None,
         }
     }
 }

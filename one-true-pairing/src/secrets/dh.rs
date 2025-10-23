@@ -51,12 +51,7 @@ impl<const LIMBS: usize> DiffieHellman<LIMBS> {
                 Uint<LIMBS> : Concat<Output = Uint<WIDE_LIMBS>>,
                 Uint<WIDE_LIMBS> : Split<Output = Uint<LIMBS>> {
         // generator ** privkey mod prime
-        let params = MontyParams::new(self.prime.to_odd().expect("prime is not odd?!"));
-        let generator_monty = MontyForm::new(
-            &self.generator,
-            params,
-        );
-        let powered = generator_monty.pow(&private_key.private_key_uint);
+        let powered = self.generator_monty.pow(&private_key.private_key_uint);
         DhPublicKey {
             public_key_monty: powered,
         }

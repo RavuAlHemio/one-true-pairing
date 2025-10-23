@@ -14,6 +14,7 @@ use zbus;
 use crate::notifier::{ContextMenu, TrayIcon};
 use crate::notifier::proxies::StatusNotifierWatcherProxy;
 use crate::secrets::SecretSession;
+use crate::wayland::{NewObjectId, ObjectId};
 
 
 const TRAY_ICON_BUS_PATH: &str = "/StatusNotifierItem";
@@ -69,15 +70,12 @@ async fn main() {
         .await.expect("failed to create connection to Wayland server");
 
     // get access to Wayland registry
-    const WL_DISPLAY_WELL_KNOWN_OID: u32 = 1;
-    const WL_DISPLAY_REQUEST_GET_REGISTRY: u16 = 1;
-    const WL_REGISTRY_OID: u32 = 2;
-    let mut get_registry = wayland::Packet::new(
-        WL_DISPLAY_WELL_KNOWN_OID,
-        WL_DISPLAY_REQUEST_GET_REGISTRY,
-    );
-    get_registry.push_uint(WL_REGISTRY_OID);
-    way_conn.send_packet(&get_registry).await
+    let display = wayland::protocol::wayland::wl_display_v1_request_proxy::new(&way_conn);
+    display.send_get_registry(
+        ObjectId::DISPLAY,
+        NewObjectId(ObjectId::REGISTRY),
+    )
+        .await
         .expect("failed to send wl_display::get_registry packet");
 
     // scope this so that the icon_host proxy is dropped

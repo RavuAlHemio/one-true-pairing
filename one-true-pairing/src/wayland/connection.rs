@@ -1,12 +1,14 @@
 use std::env;
 use std::ffi::OsString;
+use std::num::NonZero;
 use std::path::PathBuf;
-use std::sync::atomic::AtomicU32;
+use std::sync::atomic::{AtomicU32, Ordering};
 
 use tokio::net::UnixStream;
 use tokio::sync::Mutex;
 
 use crate::socket_fd_ext::SocketFdExt;
+use crate::wayland::ObjectId;
 use crate::wayland::error::Error;
 use crate::wayland::packet::Packet;
 
@@ -80,7 +82,7 @@ impl Connection {
                 total_received += now_received;
             }
 
-            let object_id = u32::from_ne_bytes(fixed_buf[0..4].try_into().unwrap());
+            let object_id_u32 = u32::from_ne_bytes(fixed_buf[0..4].try_into().unwrap());
             let size_and_opcode = u32::from_ne_bytes(fixed_buf[4..8].try_into().unwrap());
             let packet_size: usize = (size_and_opcode >> 16).try_into().unwrap();
             let opcode: u16 = (size_and_opcode & 0xFF).try_into().unwrap();
@@ -89,6 +91,10 @@ impl Connection {
                 // 8 bytes are the fixed header and thereby the minimum
                 return Err(Error::PacketTooShort { actual: packet_size, minimum: 8 });
             }
+
+            let object_id_nz = NonZero::new(object_id_u32)
+                .ok_or(Error::ZeroObjectId)?;
+            let object_id = ObjectId(object_id_nz);
 
             // read the payload
             let mut payload = vec![0u8; packet_size - 8];
@@ -111,5 +117,9 @@ impl Connection {
         };
 
         Ok(packet)
+    }
+
+    pub fn get_next_object_id(&self) -> u32 {
+        self.next_object_id.fetch_add(1, Ordering::SeqCst)
     }
 }

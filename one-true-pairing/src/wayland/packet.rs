@@ -1,13 +1,14 @@
 use std::num::NonZero;
 use std::os::fd::RawFd;
 
+use crate::wayland::{NewObject, NewObjectId, ObjectId};
 use crate::wayland::error::Error;
 use crate::wayland::fixed::Fixed;
 
 
-#[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Packet {
-    object_id: u32,
+    object_id: ObjectId,
     // top_size_bytes_bottom_opcode: u32
     opcode: u16, // merged with size in protocol
     payload: Vec<u8>,
@@ -15,7 +16,7 @@ pub struct Packet {
 }
 impl Packet {
     pub fn new(
-        object_id: u32,
+        object_id: ObjectId,
         opcode: u16,
     ) -> Self {
         Self {
@@ -27,7 +28,7 @@ impl Packet {
     }
 
     pub fn new_from_existing(
-        object_id: u32,
+        object_id: ObjectId,
         opcode: u16,
         payload: Vec<u8>,
         fds: Vec<RawFd>,
@@ -40,10 +41,10 @@ impl Packet {
         }
     }
 
-    pub fn object_id(&self) -> u32 { self.object_id }
+    pub fn object_id(&self) -> ObjectId { self.object_id }
     pub fn opcode(&self) -> u16 { self.opcode }
 
-    pub fn set_object_id(&mut self, new_value: u32) { self.object_id = new_value; }
+    pub fn set_object_id(&mut self, new_value: ObjectId) { self.object_id = new_value; }
     pub fn set_opcode(&mut self, new_value: u16) { self.opcode = new_value; }
 
     pub fn push_uint(&mut self, value: u32) {
@@ -74,11 +75,31 @@ impl Packet {
         self.payload.extend(std::iter::repeat_n(0x00, realign_count));
     }
 
-    pub fn push_object(&mut self, obj_id: Option<NonZero<u32>>) {
+    pub fn push_array(&mut self, array: &[u8]) {
+        let len = array.len();
+        let len_u32: u32 = len.try_into().unwrap();
+        self.payload.extend(&len_u32.to_ne_bytes());
+        self.payload.extend(array);
+
+        let realign_count = (4 - (len % 4)) % 4;
+        self.payload.extend(std::iter::repeat_n(0x00, realign_count));
+    }
+
+    pub fn push_object(&mut self, obj_id: Option<ObjectId>) {
         match obj_id {
-            Some(oi) => self.push_uint(oi.into()),
+            Some(oi) => self.push_uint(oi.0.into()),
             None => self.push_uint(0),
         }
+    }
+
+    pub fn push_new_id_known_interface(&mut self, new_id: NewObjectId) {
+        self.push_object(Some(new_id.0))
+    }
+
+    pub fn push_new_id_unknown_interface(&mut self, new_obj: NewObject) {
+        self.push_str(&new_obj.interface);
+        self.push_uint(new_obj.interface_version);
+        self.push_object(Some(new_obj.object_id));
     }
 
     pub fn push_fd(&mut self, fd: RawFd) {
@@ -106,7 +127,7 @@ impl Packet {
         ;
 
         let mut buf = vec![0u8; total_bytes];
-        buf[0..4].copy_from_slice(&self.object_id.to_ne_bytes());
+        buf[0..4].copy_from_slice(&self.object_id.0.get().to_ne_bytes());
         buf[4..8].copy_from_slice(&top_size_bytes_bottom_opcode.to_ne_bytes());
         buf[8..].copy_from_slice(&self.payload);
         Ok(buf)
@@ -196,9 +217,30 @@ impl<'a> PacketReader<'a> {
         Ok(stringy.to_owned())
     }
 
-    pub fn read_object(&mut self) -> Result<Option<NonZero<u32>>, Error> {
+    pub fn read_array(&mut self) -> Result<Vec<u8>, Error> {
+        let mut len_buf = [0u8; 4];
+        self.peek_bytes(&mut len_buf)?;
+        let len_u32 = u32::from_ne_bytes(len_buf);
+        let len: usize = len_u32.try_into().unwrap();
+        let len_padded = (4 - (len % 4)) % 4;
+
+        if self.payload_pos + 4 + len_padded > self.packet.payload.len() {
+            return Err(Error::FieldOutOfBounds {
+                actual: self.payload_pos + 4 + len_padded,
+                maximum: self.packet.payload.len(),
+            });
+        }
+
+        self.payload_pos += 4;
+        let byte_slice = &self.packet.payload[self.payload_pos..self.payload_pos+len];
+        self.payload_pos += len_padded;
+
+        Ok(byte_slice.to_vec())
+    }
+
+    pub fn read_object(&mut self) -> Result<Option<ObjectId>, Error> {
         let oid = self.read_uint()?;
-        Ok(NonZero::new(oid))
+        Ok(NonZero::new(oid).map(ObjectId))
     }
 
     pub fn read_fd(&mut self) -> Result<RawFd, Error> {
