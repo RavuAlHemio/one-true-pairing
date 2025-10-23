@@ -1,0 +1,3 @@
+[submodule "ext/wayland"]
+	path = ext/wayland
+	url = https://gitlab.freedesktop.org/wayland/wayland.git
