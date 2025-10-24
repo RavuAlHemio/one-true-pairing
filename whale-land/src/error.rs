@@ -38,7 +38,7 @@ impl fmt::Display for Error {
             Self::StringInvalidUtf8 { data }
                 => write!(f, "string is invalid UTF-8: {:?}", data),
             Self::IncompleteRead { read_bytes, total_bytes, read_fds, total_fds }
-                => write!(f, "incomplete read ({}/{} bytes, {}/{} file descriptors", read_bytes, total_bytes, read_fds, total_fds),
+                => write!(f, "incomplete read ({}/{} bytes, {}/{} file descriptors)", read_bytes, total_bytes, read_fds, total_fds),
             Self::ZeroObjectId
                 => write!(f, "object ID was zero where a concrete object ID was expected"),
             Self::NoEventHandler { object_id }
