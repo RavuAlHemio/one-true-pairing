@@ -16,5 +16,6 @@ tokio = { version = "1.48", features = ["macros", "net", "rt-multi-thread", "syn
 tokio-util = { version = "0.7" }
 tracing = { version = "0.1" }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+whale-land = { path = "../whale-land" }
 zbus = { version = "5.12" }
 zeroize = { version = "1.8", features = ["zeroize_derive"] }

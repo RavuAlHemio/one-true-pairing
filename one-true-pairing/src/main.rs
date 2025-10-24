@@ -1,8 +1,7 @@
 mod notifier;
 mod secrets;
-mod socket_fd_ext;
-mod totp;
 mod wayland;
+mod totp;
 
 
 use std::sync::OnceLock;
@@ -11,12 +10,12 @@ use tokio::sync::RwLock;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info};
 use tracing_subscriber::EnvFilter;
+use whale_land::{NewObjectId, ObjectId};
 use zbus;
 
 use crate::notifier::{ContextMenu, TrayIcon};
 use crate::notifier::proxies::StatusNotifierWatcherProxy;
 use crate::secrets::SecretSession;
-use crate::wayland::{NewObjectId, ObjectId};
 
 
 const TRAY_ICON_BUS_PATH: &str = "/StatusNotifierItem";
@@ -74,11 +73,16 @@ async fn main() {
 
     // connect to Wayland
     debug!("connecting to Wayland");
-    let way_conn = crate::wayland::Connection::new_from_env()
+    let mut way_conn = whale_land::Connection::new_from_env()
         .await.expect("failed to create connection to Wayland server");
 
+    // prepare registry responder
+    debug!("creating registry responder");
+    way_conn.register_handler(ObjectId::REGISTRY, Box::new(crate::wayland::RegistryResponder));
+
     // get access to Wayland registry
-    let display = wayland::protocol::wayland::wl_display_v1_request_proxy::new(&way_conn);
+    debug!("querying registry");
+    let display = whale_land::protocol::wayland::wl_display_v1_request_proxy::new(&way_conn);
     display.send_get_registry(
         ObjectId::DISPLAY,
         NewObjectId(ObjectId::REGISTRY),
