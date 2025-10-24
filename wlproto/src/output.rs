@@ -19,14 +19,6 @@ impl Tokenizer {
         }
     }
 
-    fn async_tokens(&self) -> TokenStream {
-        if self.asynchronous {
-            quote! { async }
-        } else {
-            TokenStream::new()
-        }
-    }
-
     fn return_future_tokens_before(&self) -> TokenStream {
         if self.asynchronous {
             quote! { impl ::std::future::Future<Output = }
@@ -95,7 +87,6 @@ impl Tokenizer {
                 Span::call_site(),
             );
 
-            let async_tokens = self.async_tokens();
             let return_future_tokens_before = self.return_future_tokens_before();
             let return_future_tokens_after = self.return_future_tokens_after();
             let empty_value_future_tokens = self.value_future_tokens(quote! { () });
@@ -187,7 +178,11 @@ impl Tokenizer {
                 }
 
                 handle_func_prototypes.push(quote! {
-                    fn #handle_func_name (&self #(, #args )* )
+                    fn #handle_func_name (
+                        &self,
+                        connection: & #namespace_tokens Connection,
+                        #( #args , )*
+                    )
                         -> #return_future_tokens_before () #return_future_tokens_after ;
                 });
                 match_variants.push(quote! {
@@ -196,6 +191,7 @@ impl Tokenizer {
                         #( #arg_decoders )*
                         __packet_reader.finish()?;
                         self . #handle_func_name (
+                            __connection,
                             #( #arg_names , )*
                         ) #dot_await_tokens ;
                         Ok(())
@@ -205,14 +201,17 @@ impl Tokenizer {
 
             let handle_event_func = if self.asynchronous {
                 quote! {
-                    fn handle_event(&self, __packet: #namespace_tokens Packet)
-                            -> impl std::future::Future<Output = ::std::result::Result<(), #namespace_tokens Error>> + ::std::marker::Send + ::std::marker::Sync
+                    fn handle_event(
+                        &self,
+                        __connection: & #namespace_tokens Connection,
+                        __packet: #namespace_tokens Packet,
+                    ) -> impl std::future::Future<Output = ::std::result::Result<(), #namespace_tokens Error>> + ::std::marker::Send + ::std::marker::Sync
                             where Self : Sync {
                         async {
                             match __packet.opcode() {
                                 #( #match_variants , )*
                                 __other => {
-                                    self.unknown_event(__packet).await;
+                                    self.unknown_event(__connection, __packet).await;
                                     Ok(())
                                 },
                             }
@@ -221,13 +220,16 @@ impl Tokenizer {
                 }
             } else {
                 quote! {
-                    fn handle_event(&self, __packet: #namespace_tokens Packet)
-                            -> ::std::result::Result<(), #namespace_tokens Error> {
+                    fn handle_event(
+                        &self,
+                        __connection: & #namespace_tokens Connection,
+                        __packet: #namespace_tokens Packet,
+                    ) -> ::std::result::Result<(), #namespace_tokens Error> {
                         async {
                             match __packet.opcode() {
                                 #( #match_variants , )*
                                 __other => {
-                                    self.unknown_event(__packet);
+                                    self.unknown_event(__connection, __packet);
                                     Ok(())
                                 },
                             }
@@ -241,9 +243,10 @@ impl Tokenizer {
                 pub trait #event_handler_trait_name : #namespace_tokens protocol::EventHandler {
                     #( #handle_func_prototypes )*
 
-                    fn unknown_event(&self, packet: #namespace_tokens Packet)
+                    fn unknown_event(&self, connection: & #namespace_tokens Connection, packet: #namespace_tokens Packet)
                             -> #return_future_tokens_before () #return_future_tokens_after {
                         // do nothing by default
+                        let _ = connection;
                         let _ = packet;
                         #empty_value_future_tokens
                     }

@@ -24,7 +24,7 @@ pub struct Connection {
     send_lock: Mutex<()>,
     recv_lock: Mutex<()>,
     next_object_id: AtomicU32,
-    object_id_to_event_handler: BTreeMap<ObjectId, Box<dyn EventHandler>>,
+    object_id_to_event_handler: BTreeMap<ObjectId, Box<dyn EventHandler + Send + Sync>>,
 }
 impl Connection {
     pub async fn new_from_env() -> Result<Self, Error> {
@@ -125,7 +125,7 @@ impl Connection {
         self.next_object_id.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn register_handler(&mut self, object_id: ObjectId, event_handler: Box<dyn EventHandler>) {
+    pub fn register_handler(&mut self, object_id: ObjectId, event_handler: Box<dyn EventHandler + Send + Sync>) {
         self.object_id_to_event_handler
             .insert(object_id, event_handler);
     }
@@ -134,7 +134,7 @@ impl Connection {
         let event_handler = self.object_id_to_event_handler
             .get(&packet.object_id());
         match event_handler {
-            Some(eh) => eh.handle_event(packet).await,
+            Some(eh) => eh.handle_event(self, packet).await,
             None => {
                 debug!("dropping packet as there is no handler: {:?}", packet);
                 Err(Error::NoEventHandler {
