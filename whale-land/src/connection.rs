@@ -121,8 +121,18 @@ impl Connection {
         Ok(packet)
     }
 
-    pub fn get_next_object_id(&self) -> u32 {
-        self.next_object_id.fetch_add(1, Ordering::SeqCst)
+    pub fn get_next_object_id(&self) -> ObjectId {
+        loop {
+            let new_val = self.next_object_id.fetch_add(1, Ordering::SeqCst);
+            if let Some(oid) = ObjectId::new(new_val) {
+                return oid;
+            }
+        }
+    }
+
+    pub fn object_id_seen(&self, encountered_value: ObjectId) {
+        self.next_object_id
+            .fetch_max(encountered_value.0.get() + 1, Ordering::SeqCst);
     }
 
     pub fn register_handler(&mut self, object_id: ObjectId, event_handler: Box<dyn EventHandler + Send + Sync>) {

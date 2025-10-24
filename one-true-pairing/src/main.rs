@@ -78,7 +78,7 @@ async fn main() {
 
     // prepare registry responder
     debug!("creating registry responder");
-    way_conn.register_handler(ObjectId::REGISTRY, Box::new(crate::wayland::RegistryResponder));
+    way_conn.register_handler(ObjectId::REGISTRY, Box::new(crate::wayland::RegistryResponder::new()));
 
     // get access to Wayland registry
     debug!("querying registry");
