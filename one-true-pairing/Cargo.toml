@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 aes = { version = "0.8" }
+async-trait = { version = "0.1" }
 cbc = { version = "0.1" }
 crypto-bigint = { version = "0.6", features = ["alloc"] }
 hkdf = { version = "0.12" }
