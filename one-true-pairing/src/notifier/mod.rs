@@ -411,7 +411,6 @@ impl ContextMenu {
                     digits,
                 );
 
-                // TODO: generate OTP code
                 // TODO: provide code via clipboard
             },
         }
