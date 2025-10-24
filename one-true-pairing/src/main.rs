@@ -4,24 +4,37 @@ mod wayland;
 mod totp;
 
 
-use std::sync::OnceLock;
+use std::collections::BTreeMap;
+use std::sync::{Arc, OnceLock};
 
 use tokio::sync::RwLock;
-use tokio_util::sync::CancellationToken;
+use tokio::sync::mpsc;
 use tracing::{debug, error, info};
 use tracing_subscriber::EnvFilter;
 use whale_land::{NewObjectId, ObjectId};
+use whale_land::protocol::wayland::{
+    wl_display_v1_request_proxy,
+    wl_data_device_manager_v3_request_proxy,
+};
 use zbus;
 
 use crate::notifier::{ContextMenu, TrayIcon};
 use crate::notifier::proxies::StatusNotifierWatcherProxy;
 use crate::secrets::SecretSession;
+use crate::wayland::ClipboardResponder;
 
 
 const TRAY_ICON_BUS_PATH: &str = "/StatusNotifierItem";
 const MENU_BUS_PATH: &str = "/SniMenu";
-static STOPPER: OnceLock<CancellationToken> = OnceLock::new();
 static SECRET_SESSION: OnceLock<RwLock<SecretSession>> = OnceLock::new();
+
+
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub enum ClipboardMessage {
+    Copy(String),
+    Clear,
+    Exit,
+}
 
 
 #[tokio::main]
@@ -33,11 +46,6 @@ async fn main() {
         .init();
 
     info!("I have been assigned PID {}", std::process::id());
-
-    // set up stopper
-    let stopper = CancellationToken::new();
-    STOPPER
-        .set(stopper.clone()).expect("STOPPER already set?!");
 
     // connect to the session bus
     debug!("connecting to D-Bus");
@@ -54,9 +62,12 @@ async fn main() {
         .set(RwLock::new(secret_session))
         .expect("SECRET_SESSION already set?!");
 
+    // prepare the communications channel
+    let (clipboard_sender, mut clipboard_receiver) = mpsc::unbounded_channel();
+
     // introduce the notifier icon and menu
     let icon = TrayIcon;
-    let menu = ContextMenu::new(secret_name_to_path);
+    let menu = ContextMenu::new(secret_name_to_path, clipboard_sender.clone());
 
     // register them with the session bus
     let object_server = dbus_conn
@@ -78,11 +89,17 @@ async fn main() {
 
     // prepare registry responder
     debug!("creating registry responder");
-    way_conn.register_handler(ObjectId::REGISTRY, Box::new(crate::wayland::RegistryResponder::new()));
+    let data_device_manager_id = Arc::new(RwLock::new(None));
+    let interface_to_def = Arc::new(RwLock::new(BTreeMap::new()));
+    let registry_responder = crate::wayland::RegistryResponder::new(
+        Arc::clone(&data_device_manager_id),
+        interface_to_def,
+    );
+    way_conn.register_handler(ObjectId::REGISTRY, Box::new(registry_responder));
 
     // get access to Wayland registry
     debug!("querying registry");
-    let display = whale_land::protocol::wayland::wl_display_v1_request_proxy::new(&way_conn);
+    let display = wl_display_v1_request_proxy::new(&way_conn);
     display.send_get_registry(
         ObjectId::DISPLAY,
         NewObjectId(ObjectId::REGISTRY),
@@ -106,13 +123,60 @@ async fn main() {
             .await.expect("failed to register icon");
     }
 
+    let mut current_data_source = None;
+
     // alrighty
     loop {
         tokio::select! {
             // zbus has its own task
-            _ = stopper.cancelled() => {
-                // it's time to end
-                break;
+            message_opt = clipboard_receiver.recv() => {
+                match message_opt {
+                    None => {
+                        error!("clipboard sender went away!");
+                        break;
+                    },
+                    Some(ClipboardMessage::Exit) => {
+                        // it's time to end
+                        break;
+                    },
+                    Some(ClipboardMessage::Copy(value)) => {
+                        let ddmi_opt = {
+                            let ddmi_guard = data_device_manager_id.read().await;
+                            *ddmi_guard
+                        };
+                        let Some(ddmi) = ddmi_opt else {
+                            error!("no data device manager => no clipboard");
+                            continue;
+                        };
+
+                        // clear out the previous data source
+                        let old_source_opt = std::mem::replace(&mut current_data_source, None);
+                        if let Some(old_source) = old_source_opt {
+                            way_conn.drop_handler(old_source);
+                            ClipboardResponder::destroy(&way_conn, old_source).await;
+                        }
+
+                        // create a new data source
+                        let data_source_id = way_conn.get_and_increment_next_object_id();
+                        let new_source = ClipboardResponder::new(
+                            value,
+                            clipboard_sender.clone(),
+                        );
+                        way_conn.register_handler(data_source_id, Box::new(new_source));
+                        let ddm_proxy = wl_data_device_manager_v3_request_proxy::new(&way_conn);
+                        if let Err(e) = ddm_proxy.send_create_data_source(ddmi, NewObjectId(data_source_id)).await {
+                            error!("error asking to create data source: {}", e);
+                            continue;
+                        }
+                    },
+                    Some(ClipboardMessage::Clear) => {
+                        let old_source_opt = std::mem::replace(&mut current_data_source, None);
+                        if let Some(old_source) = old_source_opt {
+                            way_conn.drop_handler(old_source);
+                            ClipboardResponder::destroy(&way_conn, old_source).await
+                        }
+                    },
+                }
             },
             way_packet_res = way_conn.recv_packet() => {
                 match way_packet_res {

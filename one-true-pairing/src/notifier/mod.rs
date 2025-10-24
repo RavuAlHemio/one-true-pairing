@@ -10,10 +10,12 @@ pub(crate) mod proxies;
 use std::collections::{BTreeMap, HashMap};
 
 use serde::{Deserialize, Serialize};
+use tokio::sync::mpsc::UnboundedSender;
 use tracing::{debug, error, warn};
 use zbus::object_server::SignalEmitter;
 use zbus::zvariant::{OwnedObjectPath, OwnedValue, Str, Type, Value};
 
+use crate::ClipboardMessage;
 use crate::totp::{self, TotpParameters};
 
 
@@ -177,11 +179,16 @@ impl TrayIcon {
 
 pub(crate) struct ContextMenu {
     secret_name_to_path: BTreeMap<String, OwnedObjectPath>,
+    clipboard_sender: UnboundedSender<ClipboardMessage>,
 }
 impl ContextMenu {
-    pub fn new(secret_name_to_path: BTreeMap<String, OwnedObjectPath>) -> Self {
+    pub fn new(
+        secret_name_to_path: BTreeMap<String, OwnedObjectPath>,
+        clipboard_sender: UnboundedSender<ClipboardMessage>,
+    ) -> Self {
         Self {
             secret_name_to_path,
+            clipboard_sender,
         }
     }
 
@@ -353,9 +360,7 @@ impl ContextMenu {
             },
             MENU_EXIT_ID => {
                 // the fun is over; trigger the stopper
-                crate::STOPPER
-                    .get().expect("STOPPER unset?!")
-                    .cancel();
+                self.clipboard_sender.send(ClipboardMessage::Exit);
                 debug!("stopper triggered");
             },
             index => {
@@ -410,8 +415,8 @@ impl ContextMenu {
                     period_s,
                     digits,
                 );
-
-                // TODO: provide code via clipboard
+                let otp_code_string = format!("{}", otp_code);
+                self.clipboard_sender.send(ClipboardMessage::Copy(otp_code_string));
             },
         }
 

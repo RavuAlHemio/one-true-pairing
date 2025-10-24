@@ -121,7 +121,7 @@ impl Connection {
         Ok(packet)
     }
 
-    pub fn get_next_object_id(&self) -> ObjectId {
+    pub fn get_and_increment_next_object_id(&self) -> ObjectId {
         loop {
             let new_val = self.next_object_id.fetch_add(1, Ordering::SeqCst);
             if let Some(oid) = ObjectId::new(new_val) {
@@ -138,6 +138,11 @@ impl Connection {
     pub fn register_handler(&mut self, object_id: ObjectId, event_handler: Box<dyn EventHandler + Send + Sync>) {
         self.object_id_to_event_handler
             .insert(object_id, event_handler);
+    }
+
+    pub fn drop_handler(&mut self, object_id: ObjectId) {
+        self.object_id_to_event_handler
+            .remove(&object_id);
     }
 
     pub async fn dispatch(&self, packet: Packet) -> Result<(), Error> {
