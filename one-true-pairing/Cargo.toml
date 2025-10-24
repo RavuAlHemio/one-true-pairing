@@ -15,5 +15,7 @@ sha-1 = { version = "0.10" }
 sha2 = { version = "0.10" }
 tokio = { version = "1.48", features = ["io-util", "macros", "net", "rt-multi-thread", "sync"] }
 tokio-util = { version = "0.7" }
+tracing = { version = "0.1" }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 zbus = { version = "5.12" }
 zeroize = { version = "1.8", features = ["zeroize_derive"] }

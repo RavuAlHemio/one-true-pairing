@@ -9,6 +9,8 @@ use std::sync::OnceLock;
 
 use tokio::sync::RwLock;
 use tokio_util::sync::CancellationToken;
+use tracing::{debug, error, info};
+use tracing_subscriber::EnvFilter;
 use zbus;
 
 use crate::notifier::{ContextMenu, TrayIcon};
@@ -25,7 +27,13 @@ static SECRET_SESSION: OnceLock<RwLock<SecretSession>> = OnceLock::new();
 
 #[tokio::main]
 async fn main() {
-    eprintln!("I have been assigned PID {}", std::process::id());
+    // set up tracing
+    tracing_subscriber::fmt()
+        .with_writer(std::io::stderr)
+        .with_env_filter(EnvFilter::from_default_env())
+        .init();
+
+    info!("I have been assigned PID {}", std::process::id());
 
     // set up stopper
     let stopper = CancellationToken::new();
@@ -33,14 +41,14 @@ async fn main() {
         .set(stopper.clone()).expect("STOPPER already set?!");
 
     // connect to the session bus
-    eprintln!("connecting to D-Bus");
+    debug!("connecting to D-Bus");
     let dbus_conn = zbus::connection::Builder::session()
         .expect("failed to create connection to D-Bus session bus")
         .build()
         .await.expect("failed to build a D-Bus connection");
 
     // connect to a secret manager and list the secrets
-    eprintln!("querying secret manager");
+    debug!("querying secret manager");
     let secret_session = SecretSession::new(dbus_conn.clone()).await;
     let secret_name_to_path = secret_session.get_secrets().await;
     SECRET_SESSION
@@ -65,7 +73,7 @@ async fn main() {
         .expect("failed to obtain unique name from D-Bus connection");
 
     // connect to Wayland
-    eprintln!("connecting to Wayland");
+    debug!("connecting to Wayland");
     let way_conn = crate::wayland::Connection::new_from_env()
         .await.expect("failed to create connection to Wayland server");
 
@@ -81,7 +89,7 @@ async fn main() {
     // scope this so that the icon_host proxy is dropped
     {
         // find a tray icon host
-        eprintln!("poking at the icon host");
+        debug!("poking at the icon host");
         let icon_host = StatusNotifierWatcherProxy::new(&dbus_conn)
             .await.expect("failed to connect to icon host");
 
@@ -89,7 +97,7 @@ async fn main() {
             .await.expect("failed to obtain protocol version");
         assert_eq!(proto_version, 0, "we only support protocol version 0, icon host is using a different one");
 
-        eprintln!("registering icon");
+        debug!("registering icon");
         icon_host.register_status_notifier_item(dbus_name.to_owned())
             .await.expect("failed to register icon");
     }
@@ -108,7 +116,7 @@ async fn main() {
         }
     }
 
-    eprintln!("stopper passed");
+    debug!("stopper passed");
 
     // drop our copy of the D-Bus connection
     drop(dbus_conn);
@@ -118,10 +126,10 @@ async fn main() {
         let mut session_guard = SECRET_SESSION
             .get().expect("SECRET_SESSION unset?!")
             .write().await;
-        eprintln!("dropping session connection");
+        debug!("dropping session connection");
         session_guard.drop_connection().await;
-        eprintln!("session connection dropped");
+        debug!("session connection dropped");
     }
 
-    eprintln!("D-Bus connection shut down");
+    debug!("D-Bus connection shut down");
 }

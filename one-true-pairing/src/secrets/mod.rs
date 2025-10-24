@@ -5,6 +5,7 @@ mod proxies;
 
 use std::collections::{BTreeMap, HashMap};
 
+use tracing::{debug, warn};
 use zbus::Connection;
 use zbus::zvariant::{ObjectPath, OwnedObjectPath};
 use zeroize::Zeroizing;
@@ -32,7 +33,7 @@ impl SecretSession {
         let mut session_algo_opt = None;
         for mut algo in algorithms {
             let algo_name = algo.get_name();
-            eprintln!("trying algorithm {:?}", algo_name);
+            debug!("trying algorithm {:?}", algo_name);
             let session_res = service_proxy.open_session(
                 &algo.get_name(),
                 &algo.get_session_input(),
@@ -46,7 +47,7 @@ impl SecretSession {
                     break;
                 },
                 Err(e) => {
-                    eprintln!("error setting up crypto algorithm {:?}: {}", algo_name, e);
+                    warn!("error setting up crypto algorithm {:?}: {}", algo_name, e);
                     // try the next one
                 },
             }

@@ -10,6 +10,7 @@ pub(crate) mod proxies;
 use std::collections::{BTreeMap, HashMap};
 
 use serde::{Deserialize, Serialize};
+use tracing::{debug, error, warn};
 use zbus::object_server::SignalEmitter;
 use zbus::zvariant::{OwnedObjectPath, OwnedValue, Str, Type, Value};
 
@@ -132,14 +133,14 @@ impl TrayIcon {
 
     async fn context_menu(&self, x: i32, y: i32) -> Result<(), zbus::fdo::Error> {
         let _ = (x, y);
-        eprintln!("WARNING: context menu triggered when the notification icon tray should show our D-Bus-published menu instead -- is your notification tray lacking a menu implementation?");
+        warn!("WARNING: context menu triggered when the notification icon tray should show our D-Bus-published menu instead -- is your notification tray lacking a menu implementation?");
         Ok(())
     }
 
     async fn activate(&self, x: i32, y: i32) -> Result<(), zbus::fdo::Error> {
         // this shouldn't happen because we declared ourselves a menu
         let _ = (x, y);
-        eprintln!("activated when the notification icon tray should show our D-Bus-published menu instead -- is your notification tray lacking a menu implementation?");
+        warn!("activated when the notification icon tray should show our D-Bus-published menu instead -- is your notification tray lacking a menu implementation?");
         Ok(())
     }
 
@@ -348,20 +349,20 @@ impl ContextMenu {
 
         match id {
             MENU_SEPARATOR_ID => {
-                eprintln!("how the heck did you click a separator?!");
+                error!("how the heck did you click a separator?!");
             },
             MENU_EXIT_ID => {
                 // the fun is over; trigger the stopper
                 crate::STOPPER
                     .get().expect("STOPPER unset?!")
                     .cancel();
-                eprintln!("stopper triggered");
+                debug!("stopper triggered");
             },
             index => {
                 let actual_index: usize = match (index - 1).try_into() {
                     Ok(ai) => ai,
                     Err(_) => {
-                        eprintln!("cannot convert menu item ID {} to secret index", index);
+                        error!("cannot convert menu item ID {} to secret index", index);
                         return Ok(());
                     },
                 };
@@ -369,7 +370,7 @@ impl ContextMenu {
                     .values()
                     .nth(actual_index)
                     else {
-                        eprintln!("secret with index {} out of range", actual_index);
+                        error!("secret with index {} out of range", actual_index);
                         return Ok(());
                     };
                 let secret = {
@@ -383,7 +384,7 @@ impl ContextMenu {
                     .expect("secret is not valid UTF-8");
                 let Some(params) = TotpParameters::try_from_otpauth_url(secret_str)
                     else {
-                        eprintln!("TOTP parameters could not be parsed");
+                        error!("TOTP parameters could not be parsed");
                         return Ok(());
                     };
                 let algorithm_name = match &params.algorithm {
@@ -395,7 +396,7 @@ impl ContextMenu {
                     "SHA256" => totp::Algorithm::Sha256,
                     "SHA512" => totp::Algorithm::Sha512,
                     _ => {
-                        eprintln!("unknown TOTP algorithm {:?}", algorithm_name);
+                        error!("unknown TOTP algorithm {:?}", algorithm_name);
                         return Ok(());
                     }
                 };
