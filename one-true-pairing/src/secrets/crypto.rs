@@ -5,6 +5,7 @@ use cbc::{Decryptor, cipher::KeyIvInit};
 use crypto_bigint::Uint;
 use hkdf::Hkdf;
 use sha2::Sha256;
+use tracing::{debug, error};
 use zbus::zvariant::{Array, OwnedValue, Str, Value};
 use zeroize::Zeroizing;
 
@@ -161,9 +162,11 @@ impl CryptoAlgorithm for DhIetf1024Sha256Aes128CbcPkcs7Crypto {
         // parameters is the 16-byte AES128-CBC initialization vector
         // value is the ciphertext with PKCS#7 padding
         if parameters.len() != 16 {
+            error!("parameters.len(): expected 16, obtained {}", parameters.len());
             return None;
         }
         let Some(aes_key) = self.aes_key.as_ref() else {
+            error!("no AES key set");
             return None;
         };
 
@@ -172,6 +175,7 @@ impl CryptoAlgorithm for DhIetf1024Sha256Aes128CbcPkcs7Crypto {
         let mut secret_buf = Zeroizing::new(vec![0u8; value.len()]);
         let Ok(decrypted_slice) = aes128_cbc_pkcs7_dec.decrypt_padded_b2b_mut::<Pkcs7>(value, &mut **secret_buf) else {
             // incorrect padding
+            error!("padding is not OK");
             return None;
         };
         let decrypted_slice_len = decrypted_slice.len();

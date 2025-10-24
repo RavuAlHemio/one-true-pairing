@@ -5,7 +5,7 @@ mod proxies;
 
 use std::collections::{BTreeMap, HashMap};
 
-use tracing::{debug, warn};
+use tracing::{debug, error, warn};
 use zbus::Connection;
 use zbus::zvariant::{ObjectPath, OwnedObjectPath};
 use zeroize::Zeroizing;
@@ -89,14 +89,29 @@ impl SecretSession {
         name_to_path
     }
 
-    pub async fn get_secret(&self, item_path: ObjectPath<'_>) -> Zeroizing<Vec<u8>> {
-        let item_proxy = ItemProxy::new(self.connection.as_ref().unwrap(), item_path)
-            .await.expect("failed to obtain item proxy");
+    pub async fn get_secret(&self, item_path: ObjectPath<'_>) -> Option<Zeroizing<Vec<u8>>> {
+        let item_proxy = match ItemProxy::new(self.connection.as_ref().unwrap(), item_path).await {
+            Ok(ip) => ip,
+            Err(e) => {
+                error!("failed to obtain item proxy: {}", e);
+                return None;
+            }
+        };
         let session_path_copy = self.session_path.clone();
-        let returned_secret = item_proxy.get_secret(session_path_copy.into())
-            .await.expect("failed to obtain secret from item");
-        self.algo.decode_secret(&returned_secret.parameters, &returned_secret.value)
-            .expect("failed to decode secret")
+        let returned_secret = match item_proxy.get_secret(session_path_copy.into()).await {
+            Ok(rs) => rs,
+            Err(e) => {
+                error!("failed to obtain secret from item: {}", e);
+                return None;
+            }
+        };
+        match self.algo.decode_secret(&returned_secret.parameters, &returned_secret.value) {
+            Some(s) => Some(s),
+            None => {
+                error!("algo failed to decode secret");
+                return None;
+            },
+        }
     }
 
     pub async fn drop_connection(&mut self) {
