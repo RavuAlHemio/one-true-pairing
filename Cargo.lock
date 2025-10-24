@@ -728,7 +728,6 @@ dependencies = [
  "crypto-bigint",
  "hkdf",
  "hmac",
- "libc",
  "serde",
  "sha-1",
  "sha2",
@@ -973,6 +972,14 @@ name = "smallvec"
 version = "1.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "67b1b7a3b5fe4f1376887184045fcf45c69e92af734b7aaddc05fb777b6fbd03"
+
+[[package]]
+name = "socket-fd-ext"
+version = "0.1.0"
+dependencies = [
+ "libc",
+ "tokio",
+]
 
 [[package]]
 name = "socket2"
@@ -1305,6 +1312,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bad67dc8b2a1a6e5448428adec4c3e84c43e561d8c9ee8a9e5aabeb193ec41d1"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "whale-land"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "socket-fd-ext",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]

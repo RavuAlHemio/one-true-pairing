@@ -7,10 +7,10 @@ pub mod protocol;
 
 use std::num::NonZero;
 
-pub use crate::wayland::connection::Connection;
-pub use crate::wayland::error::Error;
-pub use crate::wayland::fixed::Fixed;
-pub use crate::wayland::packet::Packet;
+pub use crate::connection::Connection;
+pub use crate::error::Error;
+pub use crate::fixed::Fixed;
+pub use crate::packet::Packet;
 
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]

@@ -1,4 +1,5 @@
 use std::ffi::c_void;
+use std::future::Future;
 use std::io;
 use std::mem::size_of;
 use std::os::fd::{AsRawFd, RawFd};
@@ -21,7 +22,7 @@ pub trait SocketFdExt {
     /// [`WouldBlock`]: std::io::ErrorKind::WouldBlock
     ///
     /// Returns how many bytes were actually sent.
-    async fn send(&self, data: &[u8]) -> Result<usize, io::Error>;
+    fn send(&self, data: &[u8]) -> impl Future<Output = Result<usize, io::Error>> + Send;
 
     /// Sends the given data and the given file descriptors through the socket.
     ///
@@ -30,7 +31,7 @@ pub trait SocketFdExt {
     /// [`WouldBlock`]: std::io::ErrorKind::WouldBlock
     ///
     /// Returns how many bytes were actually sent.
-    async fn send_with_fds(&self, data: &[u8], fds: &[RawFd]) -> Result<usize, io::Error>;
+    fn send_with_fds(&self, data: &[u8], fds: &[RawFd]) -> impl Future<Output = Result<usize, io::Error>>;
 
     /// Receives data through the socket.
     ///
@@ -39,7 +40,7 @@ pub trait SocketFdExt {
     /// [`WouldBlock`]: std::io::ErrorKind::WouldBlock
     ///
     /// Returns how many bytes were actually received.
-    async fn recv(&self, buf: &mut [u8]) -> Result<usize, io::Error>;
+    fn recv(&self, buf: &mut [u8]) -> impl Future<Output = Result<usize, io::Error>> + Send;
 
     /// Receives data and file descriptors through the socket.
     ///
@@ -49,7 +50,7 @@ pub trait SocketFdExt {
     ///
     /// Returns how many bytes were actually received as well as the file descriptors that were
     /// received.
-    async fn recv_with_fds(&self, buf: &mut [u8]) -> Result<(usize, Vec<RawFd>), io::Error>;
+    fn recv_with_fds(&self, buf: &mut [u8]) -> impl Future<Output = Result<(usize, Vec<RawFd>), io::Error>>;
 }
 
 

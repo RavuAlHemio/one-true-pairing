@@ -6,13 +6,16 @@ use crate::model::{ArgType, Interface, Protocol};
 
 pub struct Tokenizer {
     pub asynchronous: bool,
+    pub in_crate: bool,
 }
 impl Tokenizer {
     pub fn new(
         asynchronous: bool,
+        in_crate: bool,
     ) -> Self {
         Self {
             asynchronous,
+            in_crate,
         }
     }
 
@@ -24,11 +27,43 @@ impl Tokenizer {
         }
     }
 
+    fn return_future_tokens_before(&self) -> TokenStream {
+        if self.asynchronous {
+            quote! { impl ::std::future::Future<Output = }
+        } else {
+            TokenStream::new()
+        }
+    }
+
+    fn return_future_tokens_after(&self) -> TokenStream {
+        if self.asynchronous {
+            quote! { > + ::std::marker::Send + ::std::marker::Sync }
+        } else {
+            TokenStream::new()
+        }
+    }
+
+    fn value_future_tokens(&self, value: TokenStream) -> TokenStream {
+        if self.asynchronous {
+            quote! { ::std::future::ready( #value ) }
+        } else {
+            value
+        }
+    }
+
     fn dot_await_tokens(&self) -> TokenStream {
         if self.asynchronous {
             quote! { . await }
         } else {
             TokenStream::new()
+        }
+    }
+
+    fn namespace_tokens(&self) -> TokenStream {
+        if self.in_crate {
+            quote! { crate:: }
+        } else {
+            quote! { ::whale_land:: }
         }
     }
 
@@ -52,6 +87,7 @@ impl Tokenizer {
 
     fn tokenize_interface(&self, interface: &Interface) -> TokenStream {
         let interface_name_ver = format!("{}_v{}", interface.name, interface.version);
+        let namespace_tokens = self.namespace_tokens();
 
         let event_handlers = if interface.events.len() > 0 {
             let event_handler_trait_name = Ident::new(
@@ -60,6 +96,9 @@ impl Tokenizer {
             );
 
             let async_tokens = self.async_tokens();
+            let return_future_tokens_before = self.return_future_tokens_before();
+            let return_future_tokens_after = self.return_future_tokens_after();
+            let empty_value_future_tokens = self.value_future_tokens(quote! { () });
             let dot_await_tokens = self.dot_await_tokens();
 
             let mut handle_func_prototypes = Vec::with_capacity(interface.events.len());
@@ -86,7 +125,7 @@ impl Tokenizer {
                             // we know what interface the object fulfills
                             // => we only receive the object ID
                             args.push(quote! {
-                                #arg_name : crate::wayland::NewObjectId
+                                #arg_name : #namespace_tokens NewObjectId
                             });
 
                             let new_id_uint_name = Ident::new(
@@ -95,16 +134,16 @@ impl Tokenizer {
                             );
                             arg_decoders.push(quote! {
                                 let #new_id_uint_name = __packet_reader.read_uint()?;
-                                let #arg_name = crate::wayland::NewObjectId(
-                                    crate::wayland::ObjectId::new( #new_id_uint_name )
-                                        .ok_or(crate::wayland::Error::ZeroObjectId)?
+                                let #arg_name = #namespace_tokens NewObjectId(
+                                    #namespace_tokens ObjectId::new( #new_id_uint_name )
+                                        .ok_or( #namespace_tokens Error::ZeroObjectId )?
                                 );
                             });
                         } else {
                             // we do not know the interface
                             // => we receive all the info
                             args.push(quote! {
-                                #arg_name : crate::wayland::NewObject
+                                #arg_name : #namespace_tokens NewObject
                             });
 
                             let new_id_name = Ident::new(
@@ -123,7 +162,7 @@ impl Tokenizer {
                                 let #new_iface_name = __packet_reader.read_string()?;
                                 let #new_version_name = __packet_reader.read_uint()?;
                                 let #new_id_name = __packet_reader.read_uint()?;
-                                let #arg_name = crate::wayland::NewObject {
+                                let #arg_name = #namespace_tokens NewObject {
                                     object_id: #new_id_name ,
                                     interface: #new_iface_name ,
                                     interface_version: #new_version_name ,
@@ -148,7 +187,8 @@ impl Tokenizer {
                 }
 
                 handle_func_prototypes.push(quote! {
-                    #async_tokens fn #handle_func_name (&self #(, #args )* );
+                    fn #handle_func_name (&self #(, #args )* )
+                        -> #return_future_tokens_before () #return_future_tokens_after ;
                 });
                 match_variants.push(quote! {
                     #event_index_literal => {
@@ -163,26 +203,52 @@ impl Tokenizer {
                 });
             }
 
-            quote! {
-                #[allow(unused)]
-                pub trait #event_handler_trait_name : crate::wayland::protocol::EventHandler {
-                    #( #handle_func_prototypes )*
-
-                    #async_tokens fn unknown_event(&self, packet: crate::wayland::Packet) {
-                        // do nothing by default
-                        let _ = packet;
-                    }
-
-                    async fn handle_event(&self, __packet: crate::wayland::Packet)
-                            -> ::std::result::Result<(), crate::wayland::Error> {
-                        match __packet.opcode() {
-                            #( #match_variants , )*
-                            __other => {
-                                self.unknown_event(__packet) #dot_await_tokens ;
-                                Ok(())
-                            },
+            let handle_event_func = if self.asynchronous {
+                quote! {
+                    fn handle_event(&self, __packet: #namespace_tokens Packet)
+                            -> impl std::future::Future<Output = ::std::result::Result<(), #namespace_tokens Error>> + ::std::marker::Send + ::std::marker::Sync
+                            where Self : Sync {
+                        async {
+                            match __packet.opcode() {
+                                #( #match_variants , )*
+                                __other => {
+                                    self.unknown_event(__packet).await;
+                                    Ok(())
+                                },
+                            }
                         }
                     }
+                }
+            } else {
+                quote! {
+                    fn handle_event(&self, __packet: #namespace_tokens Packet)
+                            -> ::std::result::Result<(), #namespace_tokens Error> {
+                        async {
+                            match __packet.opcode() {
+                                #( #match_variants , )*
+                                __other => {
+                                    self.unknown_event(__packet);
+                                    Ok(())
+                                },
+                            }
+                        }
+                    }
+                }
+            };
+
+            quote! {
+                #[allow(unused)]
+                pub trait #event_handler_trait_name : #namespace_tokens protocol::EventHandler {
+                    #( #handle_func_prototypes )*
+
+                    fn unknown_event(&self, packet: #namespace_tokens Packet)
+                            -> #return_future_tokens_before () #return_future_tokens_after {
+                        // do nothing by default
+                        let _ = packet;
+                        #empty_value_future_tokens
+                    }
+
+                    #handle_event_func
                 }
             }
         } else {
@@ -210,7 +276,7 @@ impl Tokenizer {
                             // the other side knows what interface the object fulfills
                             // => we only send the object ID
                             args.push(quote! {
-                                #arg_name : crate::wayland::NewObjectId
+                                #arg_name : #namespace_tokens NewObjectId
                             });
                             arg_write_func_calls.push(quote! {
                                 __packet.push_new_id_known_interface( #arg_name );
@@ -219,7 +285,7 @@ impl Tokenizer {
                             // we do not know the interface
                             // => we send all the info
                             args.push(quote! {
-                                #arg_name : crate::wayland::NewObject
+                                #arg_name : #namespace_tokens NewObject
                             });
                             arg_write_func_calls.push(quote! {
                                 __packet.push_new_id_unknown_interface( #arg_name );
@@ -242,8 +308,8 @@ impl Tokenizer {
                 }
 
                 proxy_funcs.push(quote! {
-                    pub async fn #req_name (&self, __object_id: crate::wayland::ObjectId #( , #args )* ) -> Result<(), crate::wayland::Error> {
-                        let mut __packet = crate::wayland::Packet::new(
+                    pub async fn #req_name (&self, __object_id: #namespace_tokens ObjectId #( , #args )* ) -> Result<(), #namespace_tokens Error> {
+                        let mut __packet = #namespace_tokens Packet::new(
                             __object_id,
                             #req_index_literal ,
                         );
@@ -256,12 +322,12 @@ impl Tokenizer {
             quote! {
                 #[allow(unused)]
                 pub struct #request_proxy_name <'a> {
-                    connection: &'a crate::wayland::Connection,
+                    connection: &'a #namespace_tokens Connection,
                 }
                 #[allow(unused)]
                 impl<'a> #request_proxy_name <'a> {
                     pub fn new(
-                        connection: &'a crate::wayland::Connection,
+                        connection: &'a #namespace_tokens Connection,
                     ) -> Self {
                         Self {
                             connection,
@@ -282,13 +348,14 @@ impl Tokenizer {
     }
 
     fn tokenize_incoming_arg_type(&self, arg_type: &ArgType) -> TokenStream {
+        let namespace_tokens = self.namespace_tokens();
         match arg_type {
             ArgType::Uint => quote! { u32 },
             ArgType::Int => quote! { i32 },
-            ArgType::Fixed => quote! { crate::wayland::Fixed },
+            ArgType::Fixed => quote! { #namespace_tokens Fixed },
             ArgType::String => quote! { ::std::string::String },
-            ArgType::ObjectId => quote! { ::std::option::Option<crate::wayland::ObjectId> },
-            ArgType::NewId => quote! { crate::wayland::ObjectId }, // TODO: interface specification
+            ArgType::ObjectId => quote! { ::std::option::Option< #namespace_tokens ObjectId > },
+            ArgType::NewId => quote! { #namespace_tokens ObjectId },
             ArgType::Array => quote! { ::std::vec::Vec<u8> },
             ArgType::FileDescriptor => quote! { ::std::os::fd::RawFd },
         }

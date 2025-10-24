@@ -1,9 +1,9 @@
 use std::num::NonZero;
 use std::os::fd::RawFd;
 
-use crate::wayland::{NewObject, NewObjectId, ObjectId};
-use crate::wayland::error::Error;
-use crate::wayland::fixed::Fixed;
+use crate::{NewObject, NewObjectId, ObjectId};
+use crate::error::Error;
+use crate::fixed::Fixed;
 
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]

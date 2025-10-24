@@ -1,7 +1,7 @@
 use std::io;
 use std::fmt;
 
-use crate::wayland::ObjectId;
+use crate::ObjectId;
 
 
 #[derive(Debug)]

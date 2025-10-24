@@ -17,6 +17,7 @@ use crate::model::{Arg, ArgType, Enum, EnumVariant, Interface, Procedure, Protoc
 #[derive(Parser)]
 struct Opts {
     #[arg(short, long = "async")] pub asynchronous: bool,
+    #[arg(short, long)] pub in_crate: bool,
     pub xml_proto_input: PathBuf,
 }
 
@@ -39,7 +40,7 @@ fn main() {
         panic!("root element is not <protocol>");
     }
     let protocol = process_protocol(root_elem);
-    let tokenizer = crate::output::Tokenizer::new(opts.asynchronous);
+    let tokenizer = crate::output::Tokenizer::new(opts.asynchronous, opts.in_crate);
     let code_string = tokenizer.protocol_to_code(&protocol);
     println!("{}", code_string);
 }

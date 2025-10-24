@@ -1,6 +1,8 @@
 [workspace]
 members = [
     "one-true-pairing",
+    "socket-fd-ext",
+    "whale-land",
     "wlproto",
 ]
 resolver = "2"

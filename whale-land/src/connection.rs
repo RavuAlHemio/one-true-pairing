@@ -5,15 +5,13 @@ use std::num::NonZero;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU32, Ordering};
 
+use socket_fd_ext::SocketFdExt;
 use tokio::net::UnixStream;
 use tokio::sync::Mutex;
 use tracing::debug;
 
-use crate::socket_fd_ext::SocketFdExt;
-use crate::wayland::ObjectId;
-use crate::wayland::error::Error;
-use crate::wayland::packet::Packet;
-use crate::wayland::protocol::EventHandler;
+use crate::{Error, ObjectId, Packet};
+use crate::protocol::EventHandler;
 
 
 const RUNTIME_DIR_VAR: &str = "XDG_RUNTIME_DIR";
@@ -132,14 +130,14 @@ impl Connection {
             .insert(object_id, event_handler);
     }
 
-    pub async fn dispatch(&self, packet: Packet) -> Result<(), crate::wayland::Error> {
+    pub async fn dispatch(&self, packet: Packet) -> Result<(), Error> {
         let event_handler = self.object_id_to_event_handler
             .get(&packet.object_id());
         match event_handler {
             Some(eh) => eh.handle_event(packet).await,
             None => {
                 debug!("dropping packet as there is no handler: {:?}", packet);
-                Err(crate::wayland::Error::NoEventHandler {
+                Err(Error::NoEventHandler {
                     object_id: packet.object_id(),
                 })
             },

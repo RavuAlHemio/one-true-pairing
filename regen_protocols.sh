@@ -13,10 +13,11 @@ build_proto() {
 
     ./target/debug/wlproto \
         --async \
+	--in-crate \
         "$src" \
         | \
         rustfmt --edition=2018 \
         > "$dst"
 }
 
-build_proto "ext/wayland/protocol/wayland.xml" "one-true-pairing/src/wayland/protocol/wayland.rs"
+build_proto "ext/wayland/protocol/wayland.xml" "whale-land/src/protocol/wayland.rs"
