@@ -190,7 +190,8 @@ impl<'a> PacketReader<'a> {
         self.peek_bytes(&mut len_buf)?;
         let len_u32 = u32::from_ne_bytes(len_buf);
         let len: usize = len_u32.try_into().unwrap();
-        let len_padded = (4 - (len % 4)) % 4;
+        let padding_len = (4 - (len % 4)) % 4;
+        let len_padded = len + padding_len;
 
         if self.payload_pos + 4 + len_padded > self.packet.payload.len() {
             return Err(Error::FieldOutOfBounds {
@@ -222,7 +223,8 @@ impl<'a> PacketReader<'a> {
         self.peek_bytes(&mut len_buf)?;
         let len_u32 = u32::from_ne_bytes(len_buf);
         let len: usize = len_u32.try_into().unwrap();
-        let len_padded = (4 - (len % 4)) % 4;
+        let padding_len = (4 - (len % 4)) % 4;
+        let len_padded = len + padding_len;
 
         if self.payload_pos + 4 + len_padded > self.packet.payload.len() {
             return Err(Error::FieldOutOfBounds {
