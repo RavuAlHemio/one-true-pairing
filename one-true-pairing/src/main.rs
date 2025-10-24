@@ -111,7 +111,16 @@ async fn main() {
                 break;
             },
             way_packet_res = way_conn.recv_packet() => {
-                println!("way_packet_res: {:?}", way_packet_res);
+                match way_packet_res {
+                    Ok(way_packet) => {
+                        if let Err(e) = way_conn.dispatch(way_packet).await {
+                            error!("error dispatching Wayland packet: {}", e);
+                        }
+                    },
+                    Err(e) => {
+                        error!("error receiving Wayland packet: {}", e);
+                    },
+                }
             },
         }
     }

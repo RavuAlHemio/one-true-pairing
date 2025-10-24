@@ -1,6 +1,8 @@
 use std::io;
 use std::fmt;
 
+use crate::wayland::ObjectId;
+
 
 #[derive(Debug)]
 pub enum Error {
@@ -14,6 +16,7 @@ pub enum Error {
     StringInvalidUtf8 { data: Vec<u8> },
     IncompleteRead { read_bytes: usize, total_bytes: usize, read_fds: usize, total_fds: usize },
     ZeroObjectId,
+    NoEventHandler { object_id: ObjectId },
 }
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -38,6 +41,8 @@ impl fmt::Display for Error {
                 => write!(f, "incomplete read ({}/{} bytes, {}/{} file descriptors", read_bytes, total_bytes, read_fds, total_fds),
             Self::ZeroObjectId
                 => write!(f, "object ID was zero where a concrete object ID was expected"),
+            Self::NoEventHandler { object_id }
+                => write!(f, "no event handler for object ID {}", object_id.0),
         }
     }
 }
@@ -54,6 +59,7 @@ impl std::error::Error for Error {
             Self::StringInvalidUtf8 { .. } => None,
             Self::IncompleteRead { .. } => None,
             Self::ZeroObjectId => None,
+            Self::NoEventHandler { .. } => None,
         }
     }
 }

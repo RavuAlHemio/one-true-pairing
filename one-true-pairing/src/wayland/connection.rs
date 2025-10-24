@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::env;
 use std::ffi::OsString;
 use std::num::NonZero;
@@ -6,11 +7,13 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use tokio::net::UnixStream;
 use tokio::sync::Mutex;
+use tracing::debug;
 
 use crate::socket_fd_ext::SocketFdExt;
 use crate::wayland::ObjectId;
 use crate::wayland::error::Error;
 use crate::wayland::packet::Packet;
+use crate::wayland::protocol::EventHandler;
 
 
 const RUNTIME_DIR_VAR: &str = "XDG_RUNTIME_DIR";
@@ -18,12 +21,12 @@ const WAYLAND_DISPLAY_VAR: &str = "WAYLAND_DISPLAY";
 const DEFAULT_WAYLAND_DISPLAY: &str = "wayland-0";
 
 
-#[derive(Debug)]
 pub struct Connection {
     socket: UnixStream,
     send_lock: Mutex<()>,
     recv_lock: Mutex<()>,
     next_object_id: AtomicU32,
+    object_id_to_event_handler: BTreeMap<ObjectId, Box<dyn EventHandler>>,
 }
 impl Connection {
     pub async fn new_from_env() -> Result<Self, Error> {
@@ -40,6 +43,7 @@ impl Connection {
             send_lock: Mutex::new(()),
             recv_lock: Mutex::new(()),
             next_object_id: AtomicU32::new(1),
+            object_id_to_event_handler: BTreeMap::new(),
         })
     }
 
@@ -121,5 +125,24 @@ impl Connection {
 
     pub fn get_next_object_id(&self) -> u32 {
         self.next_object_id.fetch_add(1, Ordering::SeqCst)
+    }
+
+    pub fn register_handler(&mut self, object_id: ObjectId, event_handler: Box<dyn EventHandler>) {
+        self.object_id_to_event_handler
+            .insert(object_id, event_handler);
+    }
+
+    pub async fn dispatch(&self, packet: Packet) -> Result<(), crate::wayland::Error> {
+        let event_handler = self.object_id_to_event_handler
+            .get(&packet.object_id());
+        match event_handler {
+            Some(eh) => eh.handle_event(packet).await,
+            None => {
+                debug!("dropping packet as there is no handler: {:?}", packet);
+                Err(crate::wayland::Error::NoEventHandler {
+                    object_id: packet.object_id(),
+                })
+            },
+        }
     }
 }
