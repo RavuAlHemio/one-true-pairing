@@ -54,6 +54,15 @@ pub trait SocketFdExt {
 }
 
 
+struct SendableIovec(pub iovec);
+unsafe impl Send for SendableIovec {}
+unsafe impl Sync for SendableIovec {}
+
+struct SendableMsghdr(pub msghdr);
+unsafe impl Send for SendableMsghdr {}
+unsafe impl Sync for SendableMsghdr {}
+
+
 impl SocketFdExt for UnixStream {
     async fn send(&self, data: &[u8]) -> Result<usize, io::Error> {
         loop {
@@ -75,23 +84,23 @@ impl SocketFdExt for UnixStream {
             ).try_into().unwrap()
         };
         let mut add_stuff_buf = vec![0u8; add_stuff_len];
-        let mut iov = iovec {
+        let mut iov = SendableIovec(iovec {
             iov_base: data.as_ptr() as *const c_void as *mut c_void,
             iov_len: data.len(),
-        };
-        let add_struct = msghdr {
+        });
+        let add_struct = SendableMsghdr(msghdr {
             msg_name: null_mut(),
             msg_namelen: 0,
-            msg_iov: &mut iov,
+            msg_iov: &mut iov.0,
             msg_iovlen: 1,
             msg_control: add_stuff_buf.as_mut_ptr() as *mut c_void,
             msg_controllen: add_stuff_len,
             msg_flags: 0,
-        };
+        });
 
         unsafe {
             // get the header of the first additional-stuff value
-            let add_first_header = CMSG_FIRSTHDR(&add_struct);
+            let add_first_header = CMSG_FIRSTHDR(&add_struct.0);
 
             // populate it
             (*add_first_header).cmsg_level = SOL_SOCKET;
@@ -123,7 +132,7 @@ impl SocketFdExt for UnixStream {
                 Interest::WRITABLE,
                 || {
                     let sent = unsafe {
-                        sendmsg(fd, &add_struct, 0)
+                        sendmsg(fd, &add_struct.0, 0)
                     };
                     if sent == -1 {
                         Err(io::Error::last_os_error())
