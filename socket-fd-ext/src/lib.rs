@@ -1,4 +1,5 @@
 use std::ffi::c_void;
+use std::fmt;
 use std::future::Future;
 use std::io;
 use std::mem::size_of;
@@ -11,6 +12,9 @@ use libc::{
 };
 use tokio::io::Interest;
 use tokio::net::UnixStream;
+
+#[cfg(feature = "tracing")]
+use tracing::debug;
 
 
 /// Socket extensions to send or receive file descriptors in parallel to data.
@@ -63,16 +67,35 @@ unsafe impl Send for SendableMsghdr {}
 unsafe impl Sync for SendableMsghdr {}
 
 
+#[cfg(feature = "tracing")]
+struct HexSlice<'a>(pub &'a [u8]);
+impl<'a> fmt::Display for HexSlice<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for b in self.0 {
+            write!(f, "{:02x}", b)?;
+        }
+        Ok(())
+    }
+}
+
+
 impl SocketFdExt for UnixStream {
     async fn send(&self, data: &[u8]) -> Result<usize, io::Error> {
-        loop {
+        let sent_count = loop {
             self.writable().await?;
             match self.try_write(data) {
-                Ok(n) => return Ok(n),
+                Ok(n) => break n,
                 Err(e) if e.kind() == io::ErrorKind::WouldBlock => continue,
                 Err(e) => return Err(e),
             }
+        };
+
+        #[cfg(feature = "tracing")]
+        {
+            debug!("sent {}", HexSlice(&data[..sent_count]));
         }
+
+        Ok(sent_count)
     }
 
     async fn send_with_fds(&self, data: &[u8], fds: &[RawFd]) -> Result<usize, io::Error> {
@@ -151,18 +174,32 @@ impl SocketFdExt for UnixStream {
             }
         };
 
+        #[cfg(feature = "tracing")]
+        {
+            debug!("sent {} with FDs: {:?}", HexSlice(&data[..total_sent]), fds);
+        }
+
         Ok(total_sent)
     }
 
     async fn recv(&self, buf: &mut [u8]) -> Result<usize, io::Error> {
-        loop {
+        let received = loop {
             self.readable().await?;
             match self.try_read(buf) {
-                Ok(n) => return Ok(n),
+                Ok(n) => break n,
                 Err(e) if e.kind() == io::ErrorKind::WouldBlock => continue,
                 Err(e) => return Err(e),
             }
+        };
+
+        #[cfg(feature = "tracing")]
+        {
+            if received > 0 {
+                debug!("received {}", HexSlice(&buf[..received]));
+            }
         }
+
+        Ok(received)
     }
 
     async fn recv_with_fds(&self, buf: &mut [u8]) -> Result<(usize, Vec<RawFd>), io::Error> {
@@ -240,6 +277,11 @@ impl SocketFdExt for UnixStream {
                 }
                 add_header = CMSG_NXTHDR(&msg, add_header);
             }
+        }
+
+        #[cfg(feature = "tracing")]
+        {
+            debug!("received {} with FDs: {:?}", HexSlice(&buf[..total_received]), fds);
         }
 
         // and that is it

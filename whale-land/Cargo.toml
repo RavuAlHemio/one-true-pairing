@@ -5,6 +5,6 @@ edition = "2024"
 
 [dependencies]
 async-trait = { version = "0.1" }
-socket-fd-ext = { path = "../socket-fd-ext" }
+socket-fd-ext = { path = "../socket-fd-ext", features = ["tracing"] }
 tokio = { version = "1.48", features = ["net"] }
 tracing = { version = "0.1" }
