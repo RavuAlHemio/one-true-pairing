@@ -40,7 +40,7 @@ impl Connection {
             socket,
             send_lock: Mutex::new(()),
             recv_lock: Mutex::new(()),
-            next_object_id: AtomicU32::new(1),
+            next_object_id: AtomicU32::new(2), // 0 is NULL, 1 is always wl_display
             object_id_to_event_handler: BTreeMap::new(),
         })
     }
@@ -128,11 +128,6 @@ impl Connection {
                 return oid;
             }
         }
-    }
-
-    pub fn object_id_seen(&self, encountered_value: ObjectId) {
-        self.next_object_id
-            .fetch_max(encountered_value.0.get() + 1, Ordering::SeqCst);
     }
 
     pub fn register_handler(&mut self, object_id: ObjectId, event_handler: Box<dyn EventHandler + Send + Sync>) {

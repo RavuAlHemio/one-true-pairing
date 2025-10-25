@@ -89,20 +89,21 @@ async fn main() {
 
     // prepare registry responder
     debug!("creating registry responder");
+    let registry_id = way_conn.get_and_increment_next_object_id();
     let data_device_manager_id = Arc::new(RwLock::new(None));
     let interface_to_def = Arc::new(RwLock::new(BTreeMap::new()));
     let registry_responder = crate::wayland::RegistryResponder::new(
         Arc::clone(&data_device_manager_id),
         interface_to_def,
     );
-    way_conn.register_handler(ObjectId::REGISTRY, Box::new(registry_responder));
+    way_conn.register_handler(registry_id, Box::new(registry_responder));
 
     // get access to Wayland registry
     debug!("querying registry");
     let display = wl_display_v1_request_proxy::new(&way_conn);
     display.send_get_registry(
         ObjectId::DISPLAY,
-        NewObjectId(ObjectId::REGISTRY),
+        NewObjectId(registry_id),
     )
         .await
         .expect("failed to send wl_display::get_registry packet");

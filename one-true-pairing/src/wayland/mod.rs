@@ -8,7 +8,7 @@ use tokio::sync::RwLock;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio_fd::AsyncFd;
 use tracing::{debug, error, warn};
-use whale_land::{Connection, Error, ObjectId, Packet};
+use whale_land::{Connection, Error, NewObject, ObjectId, Packet};
 use whale_land::protocol::EventHandler;
 use whale_land::protocol::wayland::{wl_data_source_v3_event_handler, wl_data_source_v3_request_proxy, wl_registry_v1_event_handler};
 
@@ -79,7 +79,6 @@ impl wl_registry_v1_event_handler for RegistryResponder {
         version: u32,
     ) {
         let Some(name_oid) = ObjectId::new(name) else { return };
-        connection.object_id_seen(name_oid);
 
         debug!("{} is {} v{}", name, interface, version);
 

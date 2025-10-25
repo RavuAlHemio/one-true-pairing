@@ -18,7 +18,6 @@ pub use crate::packet::Packet;
 pub struct ObjectId(pub NonZero<u32>);
 impl ObjectId {
     pub const DISPLAY: ObjectId = ObjectId::new(1).unwrap();
-    pub const REGISTRY: ObjectId = ObjectId::new(2).unwrap();
 
     pub const fn new(object_id: u32) -> Option<Self> {
         match NonZero::new(object_id) {
