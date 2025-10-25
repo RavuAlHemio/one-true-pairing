@@ -10,7 +10,10 @@ use tokio_fd::AsyncFd;
 use tracing::{debug, error, warn};
 use whale_land::{Connection, Error, NewObject, ObjectId, Packet};
 use whale_land::protocol::EventHandler;
-use whale_land::protocol::wayland::{wl_data_source_v3_event_handler, wl_data_source_v3_request_proxy, wl_registry_v1_event_handler};
+use whale_land::protocol::wayland::{
+    wl_data_source_v3_event_handler, wl_data_source_v3_request_proxy, wl_registry_v1_event_handler,
+    wl_registry_v1_request_proxy,
+};
 
 use crate::ClipboardMessage;
 
@@ -97,9 +100,27 @@ impl wl_registry_v1_event_handler for RegistryResponder {
         }
 
         if interface == "wl_data_device_manager" {
-            let mut ddmi_guard = self.data_device_manager_id
-                .write().await;
-            *ddmi_guard = Some(name_oid);
+            // oh yeah, that's the one I want
+
+            // ask for it
+            let ddm_oid = connection.get_and_increment_next_object_id();
+            let proxy = wl_registry_v1_request_proxy::new(connection);
+            let send_res = proxy.send_bind(
+                packet.object_id(),
+                name,
+                NewObject {
+                    object_id: ddm_oid,
+                    interface: interface.clone(),
+                    interface_version: version,
+                },
+            ).await;
+            if let Err(e) = send_res {
+                error!("failed to bind to device manager: {}", e);
+            } else {
+                let mut ddmi_guard = self.data_device_manager_id
+                    .write().await;
+                *ddmi_guard = Some(ddm_oid);
+            }
         }
     }
 
