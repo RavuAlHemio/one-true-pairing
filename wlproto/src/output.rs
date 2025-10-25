@@ -181,6 +181,7 @@ impl Tokenizer {
                     fn #handle_func_name (
                         &self,
                         connection: & #namespace_tokens Connection,
+                        packet: #namespace_tokens Packet,
                         #( #args , )*
                     )
                         -> #return_future_tokens_before () #return_future_tokens_after ;
@@ -192,6 +193,7 @@ impl Tokenizer {
                         __packet_reader.finish()?;
                         self . #handle_func_name (
                             __connection,
+                            __packet,
                             #( #arg_names , )*
                         ) #dot_await_tokens ;
                         Ok(())

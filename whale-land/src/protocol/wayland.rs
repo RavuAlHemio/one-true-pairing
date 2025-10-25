@@ -6,6 +6,7 @@ pub trait wl_display_v1_event_handler: crate::protocol::EventHandler {
     fn handle_error(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         object_id: ::std::option::Option<crate::ObjectId>,
         code: u32,
         message: ::std::string::String,
@@ -13,6 +14,7 @@ pub trait wl_display_v1_event_handler: crate::protocol::EventHandler {
     fn handle_delete_id(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         id: u32,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn unknown_event(
@@ -42,7 +44,7 @@ pub trait wl_display_v1_event_handler: crate::protocol::EventHandler {
                     let code = __packet_reader.read_uint()?;
                     let message = __packet_reader.read_str()?;
                     __packet_reader.finish()?;
-                    self.handle_error(__connection, object_id, code, message)
+                    self.handle_error(__connection, __packet, object_id, code, message)
                         .await;
                     Ok(())
                 }
@@ -50,7 +52,7 @@ pub trait wl_display_v1_event_handler: crate::protocol::EventHandler {
                     let mut __packet_reader = __packet.read();
                     let id = __packet_reader.read_uint()?;
                     __packet_reader.finish()?;
-                    self.handle_delete_id(__connection, id).await;
+                    self.handle_delete_id(__connection, __packet, id).await;
                     Ok(())
                 }
                 __other => {
@@ -94,6 +96,7 @@ pub trait wl_registry_v1_event_handler: crate::protocol::EventHandler {
     fn handle_global(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         name: u32,
         interface: ::std::string::String,
         version: u32,
@@ -101,6 +104,7 @@ pub trait wl_registry_v1_event_handler: crate::protocol::EventHandler {
     fn handle_global_remove(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         name: u32,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn unknown_event(
@@ -130,7 +134,7 @@ pub trait wl_registry_v1_event_handler: crate::protocol::EventHandler {
                     let interface = __packet_reader.read_str()?;
                     let version = __packet_reader.read_uint()?;
                     __packet_reader.finish()?;
-                    self.handle_global(__connection, name, interface, version)
+                    self.handle_global(__connection, __packet, name, interface, version)
                         .await;
                     Ok(())
                 }
@@ -138,7 +142,8 @@ pub trait wl_registry_v1_event_handler: crate::protocol::EventHandler {
                     let mut __packet_reader = __packet.read();
                     let name = __packet_reader.read_uint()?;
                     __packet_reader.finish()?;
-                    self.handle_global_remove(__connection, name).await;
+                    self.handle_global_remove(__connection, __packet, name)
+                        .await;
                     Ok(())
                 }
                 __other => {
@@ -175,6 +180,7 @@ pub trait wl_callback_v1_event_handler: crate::protocol::EventHandler {
     fn handle_done(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         callback_data: u32,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn unknown_event(
@@ -202,7 +208,8 @@ pub trait wl_callback_v1_event_handler: crate::protocol::EventHandler {
                     let mut __packet_reader = __packet.read();
                     let callback_data = __packet_reader.read_uint()?;
                     __packet_reader.finish()?;
-                    self.handle_done(__connection, callback_data).await;
+                    self.handle_done(__connection, __packet, callback_data)
+                        .await;
                     Ok(())
                 }
                 __other => {
@@ -288,6 +295,7 @@ pub trait wl_shm_v2_event_handler: crate::protocol::EventHandler {
     fn handle_format(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         format: u32,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn unknown_event(
@@ -315,7 +323,7 @@ pub trait wl_shm_v2_event_handler: crate::protocol::EventHandler {
                     let mut __packet_reader = __packet.read();
                     let format = __packet_reader.read_uint()?;
                     __packet_reader.finish()?;
-                    self.handle_format(__connection, format).await;
+                    self.handle_format(__connection, __packet, format).await;
                     Ok(())
                 }
                 __other => {
@@ -358,6 +366,7 @@ pub trait wl_buffer_v1_event_handler: crate::protocol::EventHandler {
     fn handle_release(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn unknown_event(
         &self,
@@ -383,7 +392,7 @@ pub trait wl_buffer_v1_event_handler: crate::protocol::EventHandler {
                 0 => {
                     let mut __packet_reader = __packet.read();
                     __packet_reader.finish()?;
-                    self.handle_release(__connection).await;
+                    self.handle_release(__connection, __packet).await;
                     Ok(())
                 }
                 __other => {
@@ -413,16 +422,19 @@ pub trait wl_data_offer_v3_event_handler: crate::protocol::EventHandler {
     fn handle_offer(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         mime_type: ::std::string::String,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn handle_source_actions(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         source_actions: u32,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn handle_action(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         dnd_action: u32,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn unknown_event(
@@ -450,14 +462,14 @@ pub trait wl_data_offer_v3_event_handler: crate::protocol::EventHandler {
                     let mut __packet_reader = __packet.read();
                     let mime_type = __packet_reader.read_str()?;
                     __packet_reader.finish()?;
-                    self.handle_offer(__connection, mime_type).await;
+                    self.handle_offer(__connection, __packet, mime_type).await;
                     Ok(())
                 }
                 1 => {
                     let mut __packet_reader = __packet.read();
                     let source_actions = __packet_reader.read_uint()?;
                     __packet_reader.finish()?;
-                    self.handle_source_actions(__connection, source_actions)
+                    self.handle_source_actions(__connection, __packet, source_actions)
                         .await;
                     Ok(())
                 }
@@ -465,7 +477,7 @@ pub trait wl_data_offer_v3_event_handler: crate::protocol::EventHandler {
                     let mut __packet_reader = __packet.read();
                     let dnd_action = __packet_reader.read_uint()?;
                     __packet_reader.finish()?;
-                    self.handle_action(__connection, dnd_action).await;
+                    self.handle_action(__connection, __packet, dnd_action).await;
                     Ok(())
                 }
                 __other => {
@@ -532,29 +544,35 @@ pub trait wl_data_source_v3_event_handler: crate::protocol::EventHandler {
     fn handle_target(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         mime_type: ::std::string::String,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn handle_send(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         mime_type: ::std::string::String,
         fd: ::std::os::fd::RawFd,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn handle_cancelled(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn handle_dnd_drop_performed(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn handle_dnd_finished(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn handle_action(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         dnd_action: u32,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn unknown_event(
@@ -582,7 +600,7 @@ pub trait wl_data_source_v3_event_handler: crate::protocol::EventHandler {
                     let mut __packet_reader = __packet.read();
                     let mime_type = __packet_reader.read_str()?;
                     __packet_reader.finish()?;
-                    self.handle_target(__connection, mime_type).await;
+                    self.handle_target(__connection, __packet, mime_type).await;
                     Ok(())
                 }
                 1 => {
@@ -590,32 +608,33 @@ pub trait wl_data_source_v3_event_handler: crate::protocol::EventHandler {
                     let mime_type = __packet_reader.read_str()?;
                     let fd = __packet_reader.read_fd()?;
                     __packet_reader.finish()?;
-                    self.handle_send(__connection, mime_type, fd).await;
+                    self.handle_send(__connection, __packet, mime_type, fd)
+                        .await;
                     Ok(())
                 }
                 2 => {
                     let mut __packet_reader = __packet.read();
                     __packet_reader.finish()?;
-                    self.handle_cancelled(__connection).await;
+                    self.handle_cancelled(__connection, __packet).await;
                     Ok(())
                 }
                 3 => {
                     let mut __packet_reader = __packet.read();
                     __packet_reader.finish()?;
-                    self.handle_dnd_drop_performed(__connection).await;
+                    self.handle_dnd_drop_performed(__connection, __packet).await;
                     Ok(())
                 }
                 4 => {
                     let mut __packet_reader = __packet.read();
                     __packet_reader.finish()?;
-                    self.handle_dnd_finished(__connection).await;
+                    self.handle_dnd_finished(__connection, __packet).await;
                     Ok(())
                 }
                 5 => {
                     let mut __packet_reader = __packet.read();
                     let dnd_action = __packet_reader.read_uint()?;
                     __packet_reader.finish()?;
-                    self.handle_action(__connection, dnd_action).await;
+                    self.handle_action(__connection, __packet, dnd_action).await;
                     Ok(())
                 }
                 __other => {
@@ -663,11 +682,13 @@ pub trait wl_data_device_v3_event_handler: crate::protocol::EventHandler {
     fn handle_data_offer(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         id: crate::NewObjectId,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn handle_enter(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         serial: u32,
         surface: ::std::option::Option<crate::ObjectId>,
         x: crate::Fixed,
@@ -677,10 +698,12 @@ pub trait wl_data_device_v3_event_handler: crate::protocol::EventHandler {
     fn handle_leave(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn handle_motion(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         time: u32,
         x: crate::Fixed,
         y: crate::Fixed,
@@ -688,10 +711,12 @@ pub trait wl_data_device_v3_event_handler: crate::protocol::EventHandler {
     fn handle_drop(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn handle_selection(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         id: ::std::option::Option<crate::ObjectId>,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn unknown_event(
@@ -722,7 +747,7 @@ pub trait wl_data_device_v3_event_handler: crate::protocol::EventHandler {
                         crate::ObjectId::new(__new_id_uint_id).ok_or(crate::Error::ZeroObjectId)?,
                     );
                     __packet_reader.finish()?;
-                    self.handle_data_offer(__connection, id).await;
+                    self.handle_data_offer(__connection, __packet, id).await;
                     Ok(())
                 }
                 1 => {
@@ -733,14 +758,14 @@ pub trait wl_data_device_v3_event_handler: crate::protocol::EventHandler {
                     let y = __packet_reader.read_fixed()?;
                     let id = __packet_reader.read_object()?;
                     __packet_reader.finish()?;
-                    self.handle_enter(__connection, serial, surface, x, y, id)
+                    self.handle_enter(__connection, __packet, serial, surface, x, y, id)
                         .await;
                     Ok(())
                 }
                 2 => {
                     let mut __packet_reader = __packet.read();
                     __packet_reader.finish()?;
-                    self.handle_leave(__connection).await;
+                    self.handle_leave(__connection, __packet).await;
                     Ok(())
                 }
                 3 => {
@@ -749,20 +774,20 @@ pub trait wl_data_device_v3_event_handler: crate::protocol::EventHandler {
                     let x = __packet_reader.read_fixed()?;
                     let y = __packet_reader.read_fixed()?;
                     __packet_reader.finish()?;
-                    self.handle_motion(__connection, time, x, y).await;
+                    self.handle_motion(__connection, __packet, time, x, y).await;
                     Ok(())
                 }
                 4 => {
                     let mut __packet_reader = __packet.read();
                     __packet_reader.finish()?;
-                    self.handle_drop(__connection).await;
+                    self.handle_drop(__connection, __packet).await;
                     Ok(())
                 }
                 5 => {
                     let mut __packet_reader = __packet.read();
                     let id = __packet_reader.read_object()?;
                     __packet_reader.finish()?;
-                    self.handle_selection(__connection, id).await;
+                    self.handle_selection(__connection, __packet, id).await;
                     Ok(())
                 }
                 __other => {
@@ -869,11 +894,13 @@ pub trait wl_shell_surface_v1_event_handler: crate::protocol::EventHandler {
     fn handle_ping(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         serial: u32,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn handle_configure(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         edges: u32,
         width: i32,
         height: i32,
@@ -881,6 +908,7 @@ pub trait wl_shell_surface_v1_event_handler: crate::protocol::EventHandler {
     fn handle_popup_done(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn unknown_event(
         &self,
@@ -907,7 +935,7 @@ pub trait wl_shell_surface_v1_event_handler: crate::protocol::EventHandler {
                     let mut __packet_reader = __packet.read();
                     let serial = __packet_reader.read_uint()?;
                     __packet_reader.finish()?;
-                    self.handle_ping(__connection, serial).await;
+                    self.handle_ping(__connection, __packet, serial).await;
                     Ok(())
                 }
                 1 => {
@@ -916,14 +944,14 @@ pub trait wl_shell_surface_v1_event_handler: crate::protocol::EventHandler {
                     let width = __packet_reader.read_int()?;
                     let height = __packet_reader.read_int()?;
                     __packet_reader.finish()?;
-                    self.handle_configure(__connection, edges, width, height)
+                    self.handle_configure(__connection, __packet, edges, width, height)
                         .await;
                     Ok(())
                 }
                 2 => {
                     let mut __packet_reader = __packet.read();
                     __packet_reader.finish()?;
-                    self.handle_popup_done(__connection).await;
+                    self.handle_popup_done(__connection, __packet).await;
                     Ok(())
                 }
                 __other => {
@@ -1063,21 +1091,25 @@ pub trait wl_surface_v6_event_handler: crate::protocol::EventHandler {
     fn handle_enter(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         output: ::std::option::Option<crate::ObjectId>,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn handle_leave(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         output: ::std::option::Option<crate::ObjectId>,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn handle_preferred_buffer_scale(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         factor: i32,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn handle_preferred_buffer_transform(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         transform: u32,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn unknown_event(
@@ -1105,21 +1137,21 @@ pub trait wl_surface_v6_event_handler: crate::protocol::EventHandler {
                     let mut __packet_reader = __packet.read();
                     let output = __packet_reader.read_object()?;
                     __packet_reader.finish()?;
-                    self.handle_enter(__connection, output).await;
+                    self.handle_enter(__connection, __packet, output).await;
                     Ok(())
                 }
                 1 => {
                     let mut __packet_reader = __packet.read();
                     let output = __packet_reader.read_object()?;
                     __packet_reader.finish()?;
-                    self.handle_leave(__connection, output).await;
+                    self.handle_leave(__connection, __packet, output).await;
                     Ok(())
                 }
                 2 => {
                     let mut __packet_reader = __packet.read();
                     let factor = __packet_reader.read_int()?;
                     __packet_reader.finish()?;
-                    self.handle_preferred_buffer_scale(__connection, factor)
+                    self.handle_preferred_buffer_scale(__connection, __packet, factor)
                         .await;
                     Ok(())
                 }
@@ -1127,7 +1159,7 @@ pub trait wl_surface_v6_event_handler: crate::protocol::EventHandler {
                     let mut __packet_reader = __packet.read();
                     let transform = __packet_reader.read_uint()?;
                     __packet_reader.finish()?;
-                    self.handle_preferred_buffer_transform(__connection, transform)
+                    self.handle_preferred_buffer_transform(__connection, __packet, transform)
                         .await;
                     Ok(())
                 }
@@ -1261,11 +1293,13 @@ pub trait wl_seat_v10_event_handler: crate::protocol::EventHandler {
     fn handle_capabilities(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         capabilities: u32,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn handle_name(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         name: ::std::string::String,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn unknown_event(
@@ -1293,14 +1327,15 @@ pub trait wl_seat_v10_event_handler: crate::protocol::EventHandler {
                     let mut __packet_reader = __packet.read();
                     let capabilities = __packet_reader.read_uint()?;
                     __packet_reader.finish()?;
-                    self.handle_capabilities(__connection, capabilities).await;
+                    self.handle_capabilities(__connection, __packet, capabilities)
+                        .await;
                     Ok(())
                 }
                 1 => {
                     let mut __packet_reader = __packet.read();
                     let name = __packet_reader.read_str()?;
                     __packet_reader.finish()?;
-                    self.handle_name(__connection, name).await;
+                    self.handle_name(__connection, __packet, name).await;
                     Ok(())
                 }
                 __other => {
@@ -1357,6 +1392,7 @@ pub trait wl_pointer_v10_event_handler: crate::protocol::EventHandler {
     fn handle_enter(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         serial: u32,
         surface: ::std::option::Option<crate::ObjectId>,
         surface_x: crate::Fixed,
@@ -1365,12 +1401,14 @@ pub trait wl_pointer_v10_event_handler: crate::protocol::EventHandler {
     fn handle_leave(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         serial: u32,
         surface: ::std::option::Option<crate::ObjectId>,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn handle_motion(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         time: u32,
         surface_x: crate::Fixed,
         surface_y: crate::Fixed,
@@ -1378,6 +1416,7 @@ pub trait wl_pointer_v10_event_handler: crate::protocol::EventHandler {
     fn handle_button(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         serial: u32,
         time: u32,
         button: u32,
@@ -1386,6 +1425,7 @@ pub trait wl_pointer_v10_event_handler: crate::protocol::EventHandler {
     fn handle_axis(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         time: u32,
         axis: u32,
         value: crate::Fixed,
@@ -1393,33 +1433,39 @@ pub trait wl_pointer_v10_event_handler: crate::protocol::EventHandler {
     fn handle_frame(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn handle_axis_source(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         axis_source: u32,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn handle_axis_stop(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         time: u32,
         axis: u32,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn handle_axis_discrete(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         axis: u32,
         discrete: i32,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn handle_axis_value120(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         axis: u32,
         value120: i32,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn handle_axis_relative_direction(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         axis: u32,
         direction: u32,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
@@ -1451,8 +1497,15 @@ pub trait wl_pointer_v10_event_handler: crate::protocol::EventHandler {
                     let surface_x = __packet_reader.read_fixed()?;
                     let surface_y = __packet_reader.read_fixed()?;
                     __packet_reader.finish()?;
-                    self.handle_enter(__connection, serial, surface, surface_x, surface_y)
-                        .await;
+                    self.handle_enter(
+                        __connection,
+                        __packet,
+                        serial,
+                        surface,
+                        surface_x,
+                        surface_y,
+                    )
+                    .await;
                     Ok(())
                 }
                 1 => {
@@ -1460,7 +1513,8 @@ pub trait wl_pointer_v10_event_handler: crate::protocol::EventHandler {
                     let serial = __packet_reader.read_uint()?;
                     let surface = __packet_reader.read_object()?;
                     __packet_reader.finish()?;
-                    self.handle_leave(__connection, serial, surface).await;
+                    self.handle_leave(__connection, __packet, serial, surface)
+                        .await;
                     Ok(())
                 }
                 2 => {
@@ -1469,7 +1523,7 @@ pub trait wl_pointer_v10_event_handler: crate::protocol::EventHandler {
                     let surface_x = __packet_reader.read_fixed()?;
                     let surface_y = __packet_reader.read_fixed()?;
                     __packet_reader.finish()?;
-                    self.handle_motion(__connection, time, surface_x, surface_y)
+                    self.handle_motion(__connection, __packet, time, surface_x, surface_y)
                         .await;
                     Ok(())
                 }
@@ -1480,7 +1534,7 @@ pub trait wl_pointer_v10_event_handler: crate::protocol::EventHandler {
                     let button = __packet_reader.read_uint()?;
                     let state = __packet_reader.read_uint()?;
                     __packet_reader.finish()?;
-                    self.handle_button(__connection, serial, time, button, state)
+                    self.handle_button(__connection, __packet, serial, time, button, state)
                         .await;
                     Ok(())
                 }
@@ -1490,20 +1544,22 @@ pub trait wl_pointer_v10_event_handler: crate::protocol::EventHandler {
                     let axis = __packet_reader.read_uint()?;
                     let value = __packet_reader.read_fixed()?;
                     __packet_reader.finish()?;
-                    self.handle_axis(__connection, time, axis, value).await;
+                    self.handle_axis(__connection, __packet, time, axis, value)
+                        .await;
                     Ok(())
                 }
                 5 => {
                     let mut __packet_reader = __packet.read();
                     __packet_reader.finish()?;
-                    self.handle_frame(__connection).await;
+                    self.handle_frame(__connection, __packet).await;
                     Ok(())
                 }
                 6 => {
                     let mut __packet_reader = __packet.read();
                     let axis_source = __packet_reader.read_uint()?;
                     __packet_reader.finish()?;
-                    self.handle_axis_source(__connection, axis_source).await;
+                    self.handle_axis_source(__connection, __packet, axis_source)
+                        .await;
                     Ok(())
                 }
                 7 => {
@@ -1511,7 +1567,8 @@ pub trait wl_pointer_v10_event_handler: crate::protocol::EventHandler {
                     let time = __packet_reader.read_uint()?;
                     let axis = __packet_reader.read_uint()?;
                     __packet_reader.finish()?;
-                    self.handle_axis_stop(__connection, time, axis).await;
+                    self.handle_axis_stop(__connection, __packet, time, axis)
+                        .await;
                     Ok(())
                 }
                 8 => {
@@ -1519,7 +1576,7 @@ pub trait wl_pointer_v10_event_handler: crate::protocol::EventHandler {
                     let axis = __packet_reader.read_uint()?;
                     let discrete = __packet_reader.read_int()?;
                     __packet_reader.finish()?;
-                    self.handle_axis_discrete(__connection, axis, discrete)
+                    self.handle_axis_discrete(__connection, __packet, axis, discrete)
                         .await;
                     Ok(())
                 }
@@ -1528,7 +1585,7 @@ pub trait wl_pointer_v10_event_handler: crate::protocol::EventHandler {
                     let axis = __packet_reader.read_uint()?;
                     let value120 = __packet_reader.read_int()?;
                     __packet_reader.finish()?;
-                    self.handle_axis_value120(__connection, axis, value120)
+                    self.handle_axis_value120(__connection, __packet, axis, value120)
                         .await;
                     Ok(())
                 }
@@ -1537,7 +1594,7 @@ pub trait wl_pointer_v10_event_handler: crate::protocol::EventHandler {
                     let axis = __packet_reader.read_uint()?;
                     let direction = __packet_reader.read_uint()?;
                     __packet_reader.finish()?;
-                    self.handle_axis_relative_direction(__connection, axis, direction)
+                    self.handle_axis_relative_direction(__connection, __packet, axis, direction)
                         .await;
                     Ok(())
                 }
@@ -1583,6 +1640,7 @@ pub trait wl_keyboard_v10_event_handler: crate::protocol::EventHandler {
     fn handle_keymap(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         format: u32,
         fd: ::std::os::fd::RawFd,
         size: u32,
@@ -1590,6 +1648,7 @@ pub trait wl_keyboard_v10_event_handler: crate::protocol::EventHandler {
     fn handle_enter(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         serial: u32,
         surface: ::std::option::Option<crate::ObjectId>,
         keys: ::std::vec::Vec<u8>,
@@ -1597,12 +1656,14 @@ pub trait wl_keyboard_v10_event_handler: crate::protocol::EventHandler {
     fn handle_leave(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         serial: u32,
         surface: ::std::option::Option<crate::ObjectId>,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn handle_key(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         serial: u32,
         time: u32,
         key: u32,
@@ -1611,6 +1672,7 @@ pub trait wl_keyboard_v10_event_handler: crate::protocol::EventHandler {
     fn handle_modifiers(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         serial: u32,
         mods_depressed: u32,
         mods_latched: u32,
@@ -1620,6 +1682,7 @@ pub trait wl_keyboard_v10_event_handler: crate::protocol::EventHandler {
     fn handle_repeat_info(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         rate: i32,
         delay: i32,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
@@ -1650,7 +1713,8 @@ pub trait wl_keyboard_v10_event_handler: crate::protocol::EventHandler {
                     let fd = __packet_reader.read_fd()?;
                     let size = __packet_reader.read_uint()?;
                     __packet_reader.finish()?;
-                    self.handle_keymap(__connection, format, fd, size).await;
+                    self.handle_keymap(__connection, __packet, format, fd, size)
+                        .await;
                     Ok(())
                 }
                 1 => {
@@ -1659,7 +1723,8 @@ pub trait wl_keyboard_v10_event_handler: crate::protocol::EventHandler {
                     let surface = __packet_reader.read_object()?;
                     let keys = __packet_reader.read_array()?;
                     __packet_reader.finish()?;
-                    self.handle_enter(__connection, serial, surface, keys).await;
+                    self.handle_enter(__connection, __packet, serial, surface, keys)
+                        .await;
                     Ok(())
                 }
                 2 => {
@@ -1667,7 +1732,8 @@ pub trait wl_keyboard_v10_event_handler: crate::protocol::EventHandler {
                     let serial = __packet_reader.read_uint()?;
                     let surface = __packet_reader.read_object()?;
                     __packet_reader.finish()?;
-                    self.handle_leave(__connection, serial, surface).await;
+                    self.handle_leave(__connection, __packet, serial, surface)
+                        .await;
                     Ok(())
                 }
                 3 => {
@@ -1677,7 +1743,7 @@ pub trait wl_keyboard_v10_event_handler: crate::protocol::EventHandler {
                     let key = __packet_reader.read_uint()?;
                     let state = __packet_reader.read_uint()?;
                     __packet_reader.finish()?;
-                    self.handle_key(__connection, serial, time, key, state)
+                    self.handle_key(__connection, __packet, serial, time, key, state)
                         .await;
                     Ok(())
                 }
@@ -1691,6 +1757,7 @@ pub trait wl_keyboard_v10_event_handler: crate::protocol::EventHandler {
                     __packet_reader.finish()?;
                     self.handle_modifiers(
                         __connection,
+                        __packet,
                         serial,
                         mods_depressed,
                         mods_latched,
@@ -1705,7 +1772,8 @@ pub trait wl_keyboard_v10_event_handler: crate::protocol::EventHandler {
                     let rate = __packet_reader.read_int()?;
                     let delay = __packet_reader.read_int()?;
                     __packet_reader.finish()?;
-                    self.handle_repeat_info(__connection, rate, delay).await;
+                    self.handle_repeat_info(__connection, __packet, rate, delay)
+                        .await;
                     Ok(())
                 }
                 __other => {
@@ -1735,6 +1803,7 @@ pub trait wl_touch_v10_event_handler: crate::protocol::EventHandler {
     fn handle_down(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         serial: u32,
         time: u32,
         surface: ::std::option::Option<crate::ObjectId>,
@@ -1745,6 +1814,7 @@ pub trait wl_touch_v10_event_handler: crate::protocol::EventHandler {
     fn handle_up(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         serial: u32,
         time: u32,
         id: i32,
@@ -1752,6 +1822,7 @@ pub trait wl_touch_v10_event_handler: crate::protocol::EventHandler {
     fn handle_motion(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         time: u32,
         id: i32,
         x: crate::Fixed,
@@ -1760,14 +1831,17 @@ pub trait wl_touch_v10_event_handler: crate::protocol::EventHandler {
     fn handle_frame(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn handle_cancel(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn handle_shape(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         id: i32,
         major: crate::Fixed,
         minor: crate::Fixed,
@@ -1775,6 +1849,7 @@ pub trait wl_touch_v10_event_handler: crate::protocol::EventHandler {
     fn handle_orientation(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         id: i32,
         orientation: crate::Fixed,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
@@ -1808,7 +1883,7 @@ pub trait wl_touch_v10_event_handler: crate::protocol::EventHandler {
                     let x = __packet_reader.read_fixed()?;
                     let y = __packet_reader.read_fixed()?;
                     __packet_reader.finish()?;
-                    self.handle_down(__connection, serial, time, surface, id, x, y)
+                    self.handle_down(__connection, __packet, serial, time, surface, id, x, y)
                         .await;
                     Ok(())
                 }
@@ -1818,7 +1893,8 @@ pub trait wl_touch_v10_event_handler: crate::protocol::EventHandler {
                     let time = __packet_reader.read_uint()?;
                     let id = __packet_reader.read_int()?;
                     __packet_reader.finish()?;
-                    self.handle_up(__connection, serial, time, id).await;
+                    self.handle_up(__connection, __packet, serial, time, id)
+                        .await;
                     Ok(())
                 }
                 2 => {
@@ -1828,19 +1904,20 @@ pub trait wl_touch_v10_event_handler: crate::protocol::EventHandler {
                     let x = __packet_reader.read_fixed()?;
                     let y = __packet_reader.read_fixed()?;
                     __packet_reader.finish()?;
-                    self.handle_motion(__connection, time, id, x, y).await;
+                    self.handle_motion(__connection, __packet, time, id, x, y)
+                        .await;
                     Ok(())
                 }
                 3 => {
                     let mut __packet_reader = __packet.read();
                     __packet_reader.finish()?;
-                    self.handle_frame(__connection).await;
+                    self.handle_frame(__connection, __packet).await;
                     Ok(())
                 }
                 4 => {
                     let mut __packet_reader = __packet.read();
                     __packet_reader.finish()?;
-                    self.handle_cancel(__connection).await;
+                    self.handle_cancel(__connection, __packet).await;
                     Ok(())
                 }
                 5 => {
@@ -1849,7 +1926,8 @@ pub trait wl_touch_v10_event_handler: crate::protocol::EventHandler {
                     let major = __packet_reader.read_fixed()?;
                     let minor = __packet_reader.read_fixed()?;
                     __packet_reader.finish()?;
-                    self.handle_shape(__connection, id, major, minor).await;
+                    self.handle_shape(__connection, __packet, id, major, minor)
+                        .await;
                     Ok(())
                 }
                 6 => {
@@ -1857,7 +1935,8 @@ pub trait wl_touch_v10_event_handler: crate::protocol::EventHandler {
                     let id = __packet_reader.read_int()?;
                     let orientation = __packet_reader.read_fixed()?;
                     __packet_reader.finish()?;
-                    self.handle_orientation(__connection, id, orientation).await;
+                    self.handle_orientation(__connection, __packet, id, orientation)
+                        .await;
                     Ok(())
                 }
                 __other => {
@@ -1887,6 +1966,7 @@ pub trait wl_output_v4_event_handler: crate::protocol::EventHandler {
     fn handle_geometry(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         x: i32,
         y: i32,
         physical_width: i32,
@@ -1899,6 +1979,7 @@ pub trait wl_output_v4_event_handler: crate::protocol::EventHandler {
     fn handle_mode(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         flags: u32,
         width: i32,
         height: i32,
@@ -1907,20 +1988,24 @@ pub trait wl_output_v4_event_handler: crate::protocol::EventHandler {
     fn handle_done(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn handle_scale(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         factor: i32,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn handle_name(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         name: ::std::string::String,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn handle_description(
         &self,
         connection: &crate::Connection,
+        packet: crate::Packet,
         description: ::std::string::String,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync;
     fn unknown_event(
@@ -1957,6 +2042,7 @@ pub trait wl_output_v4_event_handler: crate::protocol::EventHandler {
                     __packet_reader.finish()?;
                     self.handle_geometry(
                         __connection,
+                        __packet,
                         x,
                         y,
                         physical_width,
@@ -1976,35 +2062,36 @@ pub trait wl_output_v4_event_handler: crate::protocol::EventHandler {
                     let height = __packet_reader.read_int()?;
                     let refresh = __packet_reader.read_int()?;
                     __packet_reader.finish()?;
-                    self.handle_mode(__connection, flags, width, height, refresh)
+                    self.handle_mode(__connection, __packet, flags, width, height, refresh)
                         .await;
                     Ok(())
                 }
                 2 => {
                     let mut __packet_reader = __packet.read();
                     __packet_reader.finish()?;
-                    self.handle_done(__connection).await;
+                    self.handle_done(__connection, __packet).await;
                     Ok(())
                 }
                 3 => {
                     let mut __packet_reader = __packet.read();
                     let factor = __packet_reader.read_int()?;
                     __packet_reader.finish()?;
-                    self.handle_scale(__connection, factor).await;
+                    self.handle_scale(__connection, __packet, factor).await;
                     Ok(())
                 }
                 4 => {
                     let mut __packet_reader = __packet.read();
                     let name = __packet_reader.read_str()?;
                     __packet_reader.finish()?;
-                    self.handle_name(__connection, name).await;
+                    self.handle_name(__connection, __packet, name).await;
                     Ok(())
                 }
                 5 => {
                     let mut __packet_reader = __packet.read();
                     let description = __packet_reader.read_str()?;
                     __packet_reader.finish()?;
-                    self.handle_description(__connection, description).await;
+                    self.handle_description(__connection, __packet, description)
+                        .await;
                     Ok(())
                 }
                 __other => {

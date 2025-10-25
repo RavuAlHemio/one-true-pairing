@@ -74,6 +74,7 @@ impl wl_registry_v1_event_handler for RegistryResponder {
     async fn handle_global(
         &self,
         connection: &Connection,
+        packet: Packet,
         name: u32,
         interface: String,
         version: u32,
@@ -105,6 +106,7 @@ impl wl_registry_v1_event_handler for RegistryResponder {
     async fn handle_global_remove(
         &self,
         _connection: &Connection,
+        _packet: Packet,
         name: u32,
     ) {
         println!("{} is gone", name);
@@ -163,10 +165,12 @@ impl wl_data_source_v3_event_handler for ClipboardResponder {
     fn handle_target(
         &self,
         connection: &whale_land::Connection,
+        packet: whale_land::Packet,
         mime_type: ::std::string::String,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync {
         // this is drag'n'drop only, we don't care
         let _ = connection;
+        let _ = packet;
         let _ = mime_type;
         std::future::ready(())
     }
@@ -174,6 +178,7 @@ impl wl_data_source_v3_event_handler for ClipboardResponder {
     fn handle_send(
         &self,
         _connection: &whale_land::Connection,
+        _packet: whale_land::Packet,
         mime_type: ::std::string::String,
         fd: ::std::os::fd::RawFd,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync {
@@ -199,6 +204,7 @@ impl wl_data_source_v3_event_handler for ClipboardResponder {
     fn handle_cancelled(
         &self,
         connection: &whale_land::Connection,
+        _packet: whale_land::Packet,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync {
         // tell our owner that they should give us up
         debug!("ClipboardResponder is being cancelled");
@@ -210,28 +216,34 @@ impl wl_data_source_v3_event_handler for ClipboardResponder {
     fn handle_dnd_drop_performed(
         &self,
         connection: &whale_land::Connection,
+        packet: whale_land::Packet,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync {
         // this is drag'n'drop only, we don't care
         let _ = connection;
+        let _ = packet;
         std::future::ready(())
     }
 
     fn handle_dnd_finished(
         &self,
         connection: &whale_land::Connection,
+        packet: whale_land::Packet,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync {
         // this is drag'n'drop only, we don't care
         let _ = connection;
+        let _ = packet;
         std::future::ready(())
     }
 
     fn handle_action(
         &self,
         connection: &whale_land::Connection,
+        packet: whale_land::Packet,
         dnd_action: u32,
     ) -> impl ::std::future::Future<Output = ()> + ::std::marker::Send + ::std::marker::Sync {
         // this is drag'n'drop only, we don't care
         let _ = connection;
+        let _ = packet;
         let _ = dnd_action;
         std::future::ready(())
     }
