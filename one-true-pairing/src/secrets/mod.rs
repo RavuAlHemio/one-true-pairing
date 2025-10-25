@@ -5,6 +5,7 @@ mod proxies;
 
 use std::collections::{BTreeMap, HashMap};
 
+use crypto_bigint::Uint;
 use tracing::{debug, error, warn};
 use zbus::Connection;
 use zbus::zvariant::{ObjectPath, OwnedObjectPath};
@@ -122,5 +123,19 @@ impl SecretSession {
         if let Some(connection) = connection_opt {
             connection.graceful_shutdown().await;
         }
+    }
+}
+
+trait UintExt {
+    fn to_be_byte_vec(&self) -> Vec<u8>;
+}
+impl<const LIMBS: usize> UintExt for Uint<LIMBS> {
+    fn to_be_byte_vec(&self) -> Vec<u8> {
+        self
+            .as_limbs()
+            .iter()
+            .rev() // order is least-significant limb first
+            .flat_map(|limb| limb.0.to_be_bytes())
+            .collect()
     }
 }

@@ -3,6 +3,8 @@ use crypto_bigint::rand_core::OsRng;
 use crypto_bigint::modular::{MontyForm, MontyParams};
 use zeroize::Zeroizing;
 
+use crate::secrets::UintExt;
+
 
 pub struct DiffieHellman<const LIMBS: usize> {
     prime: Uint<LIMBS>,
@@ -94,6 +96,13 @@ impl<const LIMBS: usize> DiffieHellman<LIMBS> {
 pub struct DhPrivateKey<const LIMBS: usize> {
     private_key_uint: Uint<LIMBS>,
 }
+impl<const LIMBS: usize> DhPrivateKey<LIMBS> {
+    pub fn to_be_bytes_warning_dangerous(&self) -> Zeroizing<Vec<u8>> {
+        let private_key_vec = self.private_key_uint
+            .to_be_byte_vec();
+        Zeroizing::new(private_key_vec)
+    }
+}
 
 pub struct DhPublicKey<const LIMBS: usize> {
     public_key_monty: MontyForm<LIMBS>,
@@ -102,10 +111,7 @@ impl<const LIMBS: usize> DhPublicKey<LIMBS> {
     pub fn to_be_bytes(&self) -> Zeroizing<Vec<u8>> {
         let public_key = self.public_key_monty.retrieve();
         let public_key_vec = public_key
-            .as_limbs()
-            .iter()
-            .flat_map(|limb| limb.0.to_be_bytes())
-            .collect();
+            .to_be_byte_vec();
         Zeroizing::new(public_key_vec)
     }
 }

@@ -5,10 +5,11 @@ use cbc::{Decryptor, cipher::KeyIvInit};
 use crypto_bigint::Uint;
 use hkdf::Hkdf;
 use sha2::Sha256;
-use tracing::{debug, error};
+use tracing::error;
 use zbus::zvariant::{Array, OwnedValue, Str, Value};
 use zeroize::Zeroizing;
 
+use crate::secrets::UintExt;
 use crate::secrets::dh::{DhPrivateKey, DhPublicKey, DiffieHellman};
 
 
@@ -144,12 +145,7 @@ impl CryptoAlgorithm for DhIetf1024Sha256Aes128CbcPkcs7Crypto {
             .derive_secret_key(&self.privkey, &their_pubkey);
 
         // from that, we can derive an AES key using HKDF(salt = NULL, info = "", IKM = secret_key)
-        let secret_key_vec: Vec<u8> = secret_key
-            .as_limbs()
-            .iter()
-            .flat_map(|limb| limb.0.to_be_bytes())
-            .collect();
-        let secret_key = Zeroizing::new(secret_key_vec);
+        let secret_key = Zeroizing::new(secret_key.to_be_byte_vec());
         let hkdf: Hkdf<Sha256> = Hkdf::new(None, secret_key.as_slice());
         let mut aes_key = Zeroizing::new([0u8; 16]);
         hkdf.expand(&[], &mut *aes_key)
