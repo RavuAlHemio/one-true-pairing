@@ -378,12 +378,16 @@ impl ContextMenu {
                         error!("secret with index {} out of range", actual_index);
                         return Ok(());
                     };
-                let secret = {
+                let secret_opt = {
                     let secret_session = crate::SECRET_SESSION
                         .get().expect("SECRET_SESSION unset?!")
                         .read().await;
                     secret_session
                         .get_secret(secret_path.clone().into()).await
+                };
+                let Some(secret) = secret_opt else {
+                    error!("failed to obtain secret with index {}", actual_index);
+                    return Ok(());
                 };
                 let secret_str = std::str::from_utf8(secret.as_slice())
                     .expect("secret is not valid UTF-8");
