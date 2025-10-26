@@ -21,3 +21,4 @@ build_proto() {
 }
 
 build_proto "ext/wayland/protocol/wayland.xml" "whale-land/src/protocol/wayland.rs"
+build_proto "ext/wayland-protocols/staging/ext-data-control/ext-data-control-v1.xml" "whale-land/src/protocol/ext_data_control_v1.rs"
