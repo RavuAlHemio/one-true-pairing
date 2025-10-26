@@ -96,7 +96,7 @@ impl Packet {
         self.push_object(Some(new_id.0))
     }
 
-    pub fn push_new_id_unknown_interface(&mut self, new_obj: NewObject) {
+    pub fn push_new_id_unknown_interface(&mut self, new_obj: &NewObject) {
         self.push_str(&new_obj.interface);
         self.push_uint(new_obj.interface_version);
         self.push_object(Some(new_obj.object_id));
@@ -243,6 +243,29 @@ impl<'a> PacketReader<'a> {
     pub fn read_object(&mut self) -> Result<Option<ObjectId>, Error> {
         let oid = self.read_uint()?;
         Ok(NonZero::new(oid).map(ObjectId))
+    }
+
+    pub fn read_new_id_known_interface(&mut self) -> Result<NewObjectId, Error> {
+        let oid_opt = self.read_object()?;
+        let Some(oid) = oid_opt else {
+            return Err(Error::ZeroObjectId);
+        };
+        Ok(NewObjectId(oid))
+    }
+
+    pub fn read_new_id_unknown_interface(&mut self) -> Result<NewObject, Error> {
+        let interface = self.read_str()?;
+        let version = self.read_uint()?;
+        let oid_opt = self.read_object()?;
+        let Some(oid) = oid_opt else {
+            return Err(Error::ZeroObjectId);
+        };
+
+        Ok(NewObject {
+            object_id: oid,
+            interface,
+            interface_version: version,
+        })
     }
 
     pub fn read_fd(&mut self) -> Result<RawFd, Error> {

@@ -110,63 +110,8 @@ impl Tokenizer {
 
                     arg_names.push(quote! { #arg_name });
 
-                    if arg.arg_type == ArgType::NewId {
-                        // this needs a bit more logic
-                        if arg.interface.is_some() {
-                            // we know what interface the object fulfills
-                            // => we only receive the object ID
-                            args.push(quote! {
-                                #arg_name : #namespace_tokens NewObjectId
-                            });
-
-                            let new_id_uint_name = Ident::new(
-                                &format!("__new_id_uint_{}", arg.name),
-                                Span::call_site(),
-                            );
-                            arg_decoders.push(quote! {
-                                let #new_id_uint_name = __packet_reader.read_uint()?;
-                                let #arg_name = #namespace_tokens NewObjectId(
-                                    #namespace_tokens ObjectId::new( #new_id_uint_name )
-                                        .ok_or( #namespace_tokens Error::ZeroObjectId )?
-                                );
-                            });
-                        } else {
-                            // we do not know the interface
-                            // => we receive all the info
-                            args.push(quote! {
-                                #arg_name : #namespace_tokens NewObject
-                            });
-
-                            let new_id_name = Ident::new(
-                                &format!("__new_id_{}", arg.name),
-                                Span::call_site(),
-                            );
-                            let new_iface_name = Ident::new(
-                                &format!("__new_iface_{}", arg.name),
-                                Span::call_site(),
-                            );
-                            let new_version_name = Ident::new(
-                                &format!("__new_version_{}", arg.name),
-                                Span::call_site(),
-                            );
-                            arg_decoders.push(quote! {
-                                let #new_iface_name = __packet_reader.read_string()?;
-                                let #new_version_name = __packet_reader.read_uint()?;
-                                let #new_id_name = __packet_reader.read_uint()?;
-                                let #arg_name = #namespace_tokens NewObject {
-                                    object_id: #new_id_name ,
-                                    interface: #new_iface_name ,
-                                    interface_version: #new_version_name ,
-                                };
-                            });
-                        }
-
-                        // the generic logic is of no interest to us
-                        continue;
-                    }
-
-                    let arg_type = self.tokenize_incoming_arg_type(&arg.arg_type);
-                    let arg_type_read_func = self.tokenize_arg_type_read_func(&arg.arg_type);
+                    let arg_type = self.tokenize_incoming_arg_type(&arg.arg_type, arg.interface.is_some());
+                    let arg_type_read_func = self.tokenize_arg_type_read_func(&arg.arg_type, arg.interface.is_some());
 
                     args.push(quote! {
                         #arg_name : #arg_type
@@ -276,39 +221,15 @@ impl Tokenizer {
                 for arg in &req.args {
                     let arg_name = Ident::new(&arg.name, Span::call_site());
 
-                    if arg.arg_type == ArgType::NewId {
-                        if arg.interface.is_some() {
-                            // the other side knows what interface the object fulfills
-                            // => we only send the object ID
-                            args.push(quote! {
-                                #arg_name : #namespace_tokens NewObjectId
-                            });
-                            arg_write_func_calls.push(quote! {
-                                __packet.push_new_id_known_interface( #arg_name );
-                            });
-                        } else {
-                            // we do not know the interface
-                            // => we send all the info
-                            args.push(quote! {
-                                #arg_name : #namespace_tokens NewObject
-                            });
-                            arg_write_func_calls.push(quote! {
-                                __packet.push_new_id_unknown_interface( #arg_name );
-                            });
-                        }
-
-                        // the generic logic is of no interest to us
-                        continue;
-                    }
-
-                    let arg_type = self.tokenize_outgoing_arg_type(&arg.arg_type);
-                    let arg_write_func = self.tokenize_arg_type_write_func(&arg.arg_type);
+                    let arg_type = self.tokenize_outgoing_arg_type(&arg.arg_type, arg.interface.is_some());
+                    let arg_write_func = self.tokenize_arg_type_write_func(&arg.arg_type, arg.interface.is_some());
+                    let arg_write_ref = self.tokenize_arg_type_write_reference(&arg.arg_type, arg.interface.is_some());
 
                     args.push(quote! {
                         #arg_name : #arg_type
                     });
                     arg_write_func_calls.push(quote! {
-                        __packet . #arg_write_func ( #arg_name );
+                        __packet . #arg_write_func ( #arg_write_ref #arg_name );
                     });
                 }
 
@@ -346,13 +267,87 @@ impl Tokenizer {
             TokenStream::new()
         };
 
+        let mut arg_structs = Vec::new();
+        let request_iterator = interface.requests
+            .iter()
+            .enumerate()
+            .map(|(i, e)| (i, "request", e));
+        let event_iterator = interface.events
+            .iter()
+            .enumerate()
+            .map(|(i, e)| (i, "event", e));
+        for (i, kind, procedure) in request_iterator.chain(event_iterator) {
+            let arg_struct_name = Ident::new(
+                &format!("{}_{}_{}_args", interface_name_ver, kind, procedure.name),
+                Span::call_site(),
+            );
+            let opcode = Literal::usize_unsuffixed(i);
+
+            let mut fields = Vec::with_capacity(procedure.args.len());
+            let mut field_reads = Vec::with_capacity(procedure.args.len());
+            let mut field_names = Vec::with_capacity(procedure.args.len());
+            let mut field_writes = Vec::with_capacity(procedure.args.len());
+            for arg in &procedure.args {
+                let field_name = Ident::new(
+                    &arg.name,
+                    Span::call_site(),
+                );
+                field_names.push(field_name.clone());
+                let field_type = self.tokenize_incoming_arg_type(&arg.arg_type, arg.interface.is_some());
+                fields.push(quote! { #field_name : #field_type });
+                let read_name = self.tokenize_arg_type_read_func(&arg.arg_type, arg.interface.is_some());
+                field_reads.push(quote! { let #field_name = __reader. #read_name ()?; });
+                let write_name = self.tokenize_arg_type_write_func(&arg.arg_type, arg.interface.is_some());
+                let write_reference = self.tokenize_arg_type_write_reference(&arg.arg_type, arg.interface.is_some());
+                field_writes.push(quote! { __packet . #write_name ( #write_reference self. #field_name ); });
+            }
+
+            arg_structs.push(quote! {
+                pub struct #arg_struct_name {
+                    #( #fields , )*
+                }
+                impl #arg_struct_name {
+                    pub const OPCODE: u16 = #opcode ;
+
+                    pub fn try_from_packet(__value: & #namespace_tokens Packet) -> Result< #arg_struct_name , #namespace_tokens Error > {
+                        let mut __reader = __value.read();
+                        #( #field_reads )*
+                        __reader.finish()?;
+                        Ok(Self {
+                            #( #field_names , )*
+                        })
+                    }
+
+                    pub fn try_into_packet(&self, __object_id: #namespace_tokens ObjectId) -> Result< #namespace_tokens Packet , #namespace_tokens Error > {
+                        let mut __packet = #namespace_tokens Packet::new(__object_id, Self::OPCODE);
+                        #( #field_writes )*
+                        Ok(__packet)
+                    }
+                }
+                impl ::std::convert::TryFrom< #namespace_tokens Packet > for #arg_struct_name {
+                    type Error = #namespace_tokens Error;
+                    fn try_from(__value: #namespace_tokens Packet) -> Result<Self, Self::Error> {
+                        Self::try_from_packet(&__value)
+                    }
+                }
+                impl ::std::convert::TryFrom<( #namespace_tokens ObjectId, #arg_struct_name )> for #namespace_tokens Packet {
+                    type Error = #namespace_tokens Error;
+                    fn try_from(__value: ( #namespace_tokens ObjectId, #arg_struct_name )) -> Result<Self, Self::Error> {
+                        let (__object_id, __structure) = __value;
+                        __structure.try_into_packet(__object_id)
+                    }
+                }
+            });
+        }
+
         quote! {
             #event_handlers
             #request_proxies
+            #( #arg_structs )*
         }
     }
 
-    fn tokenize_incoming_arg_type(&self, arg_type: &ArgType) -> TokenStream {
+    fn tokenize_incoming_arg_type(&self, arg_type: &ArgType, known_interface: bool) -> TokenStream {
         let namespace_tokens = self.namespace_tokens();
         match arg_type {
             ArgType::Uint => quote! { u32 },
@@ -360,43 +355,68 @@ impl Tokenizer {
             ArgType::Fixed => quote! { #namespace_tokens Fixed },
             ArgType::String => quote! { ::std::string::String },
             ArgType::ObjectId => quote! { ::std::option::Option< #namespace_tokens ObjectId > },
-            ArgType::NewId => quote! { #namespace_tokens ObjectId },
+            ArgType::NewId => if known_interface {
+                quote! { #namespace_tokens NewObjectId }
+            } else {
+                quote! { #namespace_tokens NewObject }
+            },
             ArgType::Array => quote! { ::std::vec::Vec<u8> },
             ArgType::FileDescriptor => quote! { ::std::os::fd::RawFd },
         }
     }
 
-    fn tokenize_outgoing_arg_type(&self, arg_type: &ArgType) -> TokenStream {
+    fn tokenize_outgoing_arg_type(&self, arg_type: &ArgType, known_interface: bool) -> TokenStream {
         match arg_type {
             ArgType::String => quote! { &str },
             ArgType::Array => quote! { &[u8] },
-            other => self.tokenize_incoming_arg_type(other),
+            other => self.tokenize_incoming_arg_type(other, known_interface),
         }
     }
 
-    fn tokenize_arg_type_read_func(&self, arg_type: &ArgType) -> TokenStream {
+    fn tokenize_arg_type_read_func(&self, arg_type: &ArgType, known_interface: bool) -> TokenStream {
         match arg_type {
             ArgType::Uint => quote! { read_uint },
             ArgType::Int => quote! { read_int },
             ArgType::Fixed => quote! { read_fixed },
             ArgType::String => quote! { read_str },
             ArgType::ObjectId => quote! { read_object },
-            ArgType::NewId => panic!("ArgType::NewId needs special interface handling"),
+            ArgType::NewId => if known_interface {
+                quote! { read_new_id_known_interface }
+            } else {
+                quote! { read_new_id_unknown_interface }
+            },
             ArgType::Array => quote! { read_array },
             ArgType::FileDescriptor => quote! { read_fd },
         }
     }
 
-    fn tokenize_arg_type_write_func(&self, arg_type: &ArgType) -> TokenStream {
+    fn tokenize_arg_type_write_func(&self, arg_type: &ArgType, known_interface: bool) -> TokenStream {
         match arg_type {
             ArgType::Uint => quote! { push_uint },
             ArgType::Int => quote! { push_int },
             ArgType::Fixed => quote! { push_fixed },
             ArgType::String => quote! { push_str },
             ArgType::ObjectId => quote! { push_object },
-            ArgType::NewId => panic!("ArgType::NewId needs special interface handling"),
+            ArgType::NewId => if known_interface {
+                quote! { push_new_id_known_interface }
+            } else {
+                quote! { push_new_id_unknown_interface }
+            },
             ArgType::Array => quote! { push_array },
             ArgType::FileDescriptor => quote! { push_fd },
+        }
+    }
+
+    fn tokenize_arg_type_write_reference(&self, arg_type: &ArgType, known_interface: bool) -> TokenStream {
+        match arg_type {
+            ArgType::Uint|ArgType::Int|ArgType::Fixed|ArgType::ObjectId
+                |ArgType::FileDescriptor => quote! { },
+            ArgType::String|ArgType::Array => quote! { & },
+            ArgType::NewId => if known_interface {
+                quote! { }
+            } else {
+                quote! { & }
+            },
         }
     }
 }
