@@ -1,7 +1,7 @@
 //! Implementation of the notifier (notification icon) interface.
 //!
 //! Derived from the specification at
-//! https://github.com/KDE/kdelibs/blob/KDE/4.14/kdeui/notifications/org.kde.StatusNotifierItem.xml
+//! https://invent.kde.org/frameworks/kstatusnotifieritem/-/blob/master/src/org.kde.StatusNotifierItem.xml
 
 
 pub(crate) mod proxies;
