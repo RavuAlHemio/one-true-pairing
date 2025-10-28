@@ -77,19 +77,7 @@ impl TrayIcon {
     async fn icon_pixmap(&self) -> Result<Vec<Image>, zbus::fdo::Error> {
         const ICON_WIDTH: usize = 32;
         const ICON_HEIGHT: usize = 32;
-
-        let mut image_data = Vec::with_capacity(ICON_WIDTH * ICON_HEIGHT * 4);
-        for _b in 0..ICON_WIDTH*ICON_HEIGHT {
-            image_data.push(0xFF);
-            image_data.push(0x00);
-            /*
-            image_data.push(((b >> 16) & 0xFF) as u8);
-            image_data.push(((b >>  8) & 0xFF) as u8);
-            image_data.push(((b >>  0) & 0xFF) as u8);
-            */
-            image_data.push(0xFF);
-            image_data.push(0x00);
-        }
+        let image_data = include_bytes!("../../../img/logo_argb8888_32x32.bin").to_vec();
         let v = Image {
             width: ICON_WIDTH.try_into().unwrap(),
             height: ICON_HEIGHT.try_into().unwrap(),
