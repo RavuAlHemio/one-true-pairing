@@ -302,6 +302,7 @@ async fn wayland_dispatch(
         if packet.opcode() == ext_data_control_source_v1_v1_event_send_args::OPCODE {
             let send_args = ext_data_control_source_v1_v1_event_send_args::try_from_packet(&packet)
                 .expect("failed to deserialize ext_data_control_source_v1::send args");
+            debug!("someone's asking for our contents in format {:?} on FD {}", send_args.mime_type, send_args.fd);
             if PLAIN_TEXT_MIME_TYPES_SORTED.binary_search(&&*send_args.mime_type).is_ok() {
                 if let Some(clip_data) = data.clipboard_data.as_ref() {
                     let mut fd = AsyncFd::try_from(send_args.fd)
