@@ -9,11 +9,11 @@ use std::sync::{Arc, OnceLock};
 
 use tokio::sync::RwLock;
 use tokio::sync::mpsc;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 use tracing_subscriber::EnvFilter;
 use whale_land::{NewObjectId, ObjectId};
 use whale_land::protocol::wayland::{
-    wl_display_v1_request_proxy,
+    wl_display_v1_event_error_args, wl_display_v1_request_proxy,
     wl_data_device_manager_v3_request_proxy,
 };
 use zbus;
@@ -21,7 +21,6 @@ use zbus;
 use crate::notifier::{ContextMenu, TrayIcon};
 use crate::notifier::proxies::StatusNotifierWatcherProxy;
 use crate::secrets::SecretSession;
-use crate::wayland::ClipboardResponder;
 
 
 const TRAY_ICON_BUS_PATH: &str = "/StatusNotifierItem";
@@ -87,19 +86,9 @@ async fn main() {
     let mut way_conn = whale_land::Connection::new_from_env()
         .await.expect("failed to create connection to Wayland server");
 
-    // prepare registry responder
-    debug!("creating registry responder");
-    let registry_id = way_conn.get_and_increment_next_object_id();
-    let data_device_manager_id = Arc::new(RwLock::new(None));
-    let interface_to_def = Arc::new(RwLock::new(BTreeMap::new()));
-    let registry_responder = crate::wayland::RegistryResponder::new(
-        Arc::clone(&data_device_manager_id),
-        interface_to_def,
-    );
-    way_conn.register_handler(registry_id, Box::new(registry_responder));
-
     // get access to Wayland registry
     debug!("querying registry");
+    let registry_id = way_conn.get_and_increment_next_object_id();
     let display = wl_display_v1_request_proxy::new(&way_conn);
     display.send_get_registry(
         ObjectId::DISPLAY,
@@ -125,6 +114,8 @@ async fn main() {
     }
 
     let mut current_data_source = None;
+    let mut seat_id = None;
+    let mut clipboard_manager_id = None;
 
     // alrighty
     loop {
@@ -182,8 +173,45 @@ async fn main() {
             way_packet_res = way_conn.recv_packet() => {
                 match way_packet_res {
                     Ok(way_packet) => {
-                        if let Err(e) = way_conn.dispatch(way_packet).await {
-                            error!("error dispatching Wayland packet: {}", e);
+                        if way_packet.object_id() == ObjectId::DISPLAY {
+                            if way_packet.opcode() == wl_display_v1_event_error_args::OPCODE {
+                                let error_args = wl_display_v1_event_error_args::try_from_packet(&way_packet)
+                                    .expect("invalid wl_display::error packet");
+                                error!(
+                                    "Wayland server sends an error: object {:?} says [{}] {}",
+                                    error_args.object_id,
+                                    error_args.code,
+                                    error_args.message,
+                                );
+                            } else {
+                                warn!("unhandled event from wl_display: {:?}", way_packet);
+                            }
+                        } else if way_packet.object_id() == registry_id {
+                            if way_packet.opcode() == wl_registry_v1_event_global_args::OPCODE {
+                                let global_args = wl_registry_v1_event_global_args::try_from_packet(&way_packet)
+                                    .expect("invalid wl_registry::global packet");
+                                match &global_args.interface {
+                                    "wl_seat" => {
+                                        // we need this to mess with the clipboard
+                                        if seat_id.is_some() {
+                                            // dupe, skip
+                                            // FIXME: what if the seat is replaced later?
+                                            continue;
+                                        }
+                                        // TODO
+                                    },
+                                    "ext_data_control_manager_v1" => {
+                                        // this allows us to mess with the clipboard
+                                        if clipboard_manager_id.is_some() {
+                                            // dupe, skip
+                                            continue;
+                                        }
+                                        // TODO
+                                    },
+                                }
+                            } else {
+                                warn!("unhandled event from wl_registry: {:?}", way_packet);
+                            }
                         }
                     },
                     Err(e) => {
