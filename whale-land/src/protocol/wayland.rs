@@ -92,7 +92,7 @@ impl<'a> wl_display_v1_request_proxy<'a> {
     }
 }
 pub struct wl_display_v1_request_sync_args {
-    callback: crate::NewObjectId,
+    pub callback: crate::NewObjectId,
 }
 impl wl_display_v1_request_sync_args {
     pub const OPCODE: u16 = 0;
@@ -129,7 +129,7 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_display_v1_request_sync_args)>
     }
 }
 pub struct wl_display_v1_request_get_registry_args {
-    registry: crate::NewObjectId,
+    pub registry: crate::NewObjectId,
 }
 impl wl_display_v1_request_get_registry_args {
     pub const OPCODE: u16 = 1;
@@ -168,9 +168,9 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_display_v1_request_get_registr
     }
 }
 pub struct wl_display_v1_event_error_args {
-    object_id: ::std::option::Option<crate::ObjectId>,
-    code: u32,
-    message: ::std::string::String,
+    pub object_id: ::std::option::Option<crate::ObjectId>,
+    pub code: u32,
+    pub message: ::std::string::String,
 }
 impl wl_display_v1_event_error_args {
     pub const OPCODE: u16 = 0;
@@ -215,7 +215,7 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_display_v1_event_error_args)> 
     }
 }
 pub struct wl_display_v1_event_delete_id_args {
-    id: u32,
+    pub id: u32,
 }
 impl wl_display_v1_event_delete_id_args {
     pub const OPCODE: u16 = 1;
@@ -338,8 +338,8 @@ impl<'a> wl_registry_v1_request_proxy<'a> {
     }
 }
 pub struct wl_registry_v1_request_bind_args {
-    name: u32,
-    id: crate::NewObject,
+    pub name: u32,
+    pub id: crate::NewObject,
 }
 impl wl_registry_v1_request_bind_args {
     pub const OPCODE: u16 = 0;
@@ -380,9 +380,9 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_registry_v1_request_bind_args)
     }
 }
 pub struct wl_registry_v1_event_global_args {
-    name: u32,
-    interface: ::std::string::String,
-    version: u32,
+    pub name: u32,
+    pub interface: ::std::string::String,
+    pub version: u32,
 }
 impl wl_registry_v1_event_global_args {
     pub const OPCODE: u16 = 0;
@@ -429,7 +429,7 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_registry_v1_event_global_args)
     }
 }
 pub struct wl_registry_v1_event_global_remove_args {
-    name: u32,
+    pub name: u32,
 }
 impl wl_registry_v1_event_global_remove_args {
     pub const OPCODE: u16 = 1;
@@ -513,7 +513,7 @@ pub trait wl_callback_v1_event_handler: crate::protocol::EventHandler {
     }
 }
 pub struct wl_callback_v1_event_done_args {
-    callback_data: u32,
+    pub callback_data: u32,
 }
 impl wl_callback_v1_event_done_args {
     pub const OPCODE: u16 = 0;
@@ -578,7 +578,7 @@ impl<'a> wl_compositor_v6_request_proxy<'a> {
     }
 }
 pub struct wl_compositor_v6_request_create_surface_args {
-    id: crate::NewObjectId,
+    pub id: crate::NewObjectId,
 }
 impl wl_compositor_v6_request_create_surface_args {
     pub const OPCODE: u16 = 0;
@@ -623,7 +623,7 @@ impl
     }
 }
 pub struct wl_compositor_v6_request_create_region_args {
-    id: crate::NewObjectId,
+    pub id: crate::NewObjectId,
 }
 impl wl_compositor_v6_request_create_region_args {
     pub const OPCODE: u16 = 1;
@@ -704,12 +704,12 @@ impl<'a> wl_shm_pool_v2_request_proxy<'a> {
     }
 }
 pub struct wl_shm_pool_v2_request_create_buffer_args {
-    id: crate::NewObjectId,
-    offset: i32,
-    width: i32,
-    height: i32,
-    stride: i32,
-    format: u32,
+    pub id: crate::NewObjectId,
+    pub offset: i32,
+    pub width: i32,
+    pub height: i32,
+    pub stride: i32,
+    pub format: u32,
 }
 impl wl_shm_pool_v2_request_create_buffer_args {
     pub const OPCODE: u16 = 0;
@@ -800,7 +800,7 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_shm_pool_v2_request_destroy_ar
     }
 }
 pub struct wl_shm_pool_v2_request_resize_args {
-    size: i32,
+    pub size: i32,
 }
 impl wl_shm_pool_v2_request_resize_args {
     pub const OPCODE: u16 = 2;
@@ -910,9 +910,9 @@ impl<'a> wl_shm_v2_request_proxy<'a> {
     }
 }
 pub struct wl_shm_v2_request_create_pool_args {
-    id: crate::NewObjectId,
-    fd: ::std::os::fd::RawFd,
-    size: i32,
+    pub id: crate::NewObjectId,
+    pub fd: ::std::os::fd::RawFd,
+    pub size: i32,
 }
 impl wl_shm_v2_request_create_pool_args {
     pub const OPCODE: u16 = 0;
@@ -988,7 +988,7 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_shm_v2_request_release_args)> 
     }
 }
 pub struct wl_shm_v2_event_format_args {
-    format: u32,
+    pub format: u32,
 }
 impl wl_shm_v2_event_format_args {
     pub const OPCODE: u16 = 0;
@@ -1271,8 +1271,8 @@ impl<'a> wl_data_offer_v3_request_proxy<'a> {
     }
 }
 pub struct wl_data_offer_v3_request_accept_args {
-    serial: u32,
-    mime_type: ::std::string::String,
+    pub serial: u32,
+    pub mime_type: ::std::string::String,
 }
 impl wl_data_offer_v3_request_accept_args {
     pub const OPCODE: u16 = 0;
@@ -1313,8 +1313,8 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_data_offer_v3_request_accept_a
     }
 }
 pub struct wl_data_offer_v3_request_receive_args {
-    mime_type: ::std::string::String,
-    fd: ::std::os::fd::RawFd,
+    pub mime_type: ::std::string::String,
+    pub fd: ::std::os::fd::RawFd,
 }
 impl wl_data_offer_v3_request_receive_args {
     pub const OPCODE: u16 = 1;
@@ -1425,8 +1425,8 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_data_offer_v3_request_finish_a
     }
 }
 pub struct wl_data_offer_v3_request_set_actions_args {
-    dnd_actions: u32,
-    preferred_action: u32,
+    pub dnd_actions: u32,
+    pub preferred_action: u32,
 }
 impl wl_data_offer_v3_request_set_actions_args {
     pub const OPCODE: u16 = 4;
@@ -1470,7 +1470,7 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_data_offer_v3_request_set_acti
     }
 }
 pub struct wl_data_offer_v3_event_offer_args {
-    mime_type: ::std::string::String,
+    pub mime_type: ::std::string::String,
 }
 impl wl_data_offer_v3_event_offer_args {
     pub const OPCODE: u16 = 0;
@@ -1509,7 +1509,7 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_data_offer_v3_event_offer_args
     }
 }
 pub struct wl_data_offer_v3_event_source_actions_args {
-    source_actions: u32,
+    pub source_actions: u32,
 }
 impl wl_data_offer_v3_event_source_actions_args {
     pub const OPCODE: u16 = 1;
@@ -1548,7 +1548,7 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_data_offer_v3_event_source_act
     }
 }
 pub struct wl_data_offer_v3_event_action_args {
-    dnd_action: u32,
+    pub dnd_action: u32,
 }
 impl wl_data_offer_v3_event_action_args {
     pub const OPCODE: u16 = 2;
@@ -1725,7 +1725,7 @@ impl<'a> wl_data_source_v3_request_proxy<'a> {
     }
 }
 pub struct wl_data_source_v3_request_offer_args {
-    mime_type: ::std::string::String,
+    pub mime_type: ::std::string::String,
 }
 impl wl_data_source_v3_request_offer_args {
     pub const OPCODE: u16 = 0;
@@ -1799,7 +1799,7 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_data_source_v3_request_destroy
     }
 }
 pub struct wl_data_source_v3_request_set_actions_args {
-    dnd_actions: u32,
+    pub dnd_actions: u32,
 }
 impl wl_data_source_v3_request_set_actions_args {
     pub const OPCODE: u16 = 2;
@@ -1838,7 +1838,7 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_data_source_v3_request_set_act
     }
 }
 pub struct wl_data_source_v3_event_target_args {
-    mime_type: ::std::string::String,
+    pub mime_type: ::std::string::String,
 }
 impl wl_data_source_v3_event_target_args {
     pub const OPCODE: u16 = 0;
@@ -1877,8 +1877,8 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_data_source_v3_event_target_ar
     }
 }
 pub struct wl_data_source_v3_event_send_args {
-    mime_type: ::std::string::String,
-    fd: ::std::os::fd::RawFd,
+    pub mime_type: ::std::string::String,
+    pub fd: ::std::os::fd::RawFd,
 }
 impl wl_data_source_v3_event_send_args {
     pub const OPCODE: u16 = 1;
@@ -2030,7 +2030,7 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_data_source_v3_event_dnd_finis
     }
 }
 pub struct wl_data_source_v3_event_action_args {
-    dnd_action: u32,
+    pub dnd_action: u32,
 }
 impl wl_data_source_v3_event_action_args {
     pub const OPCODE: u16 = 5;
@@ -2227,10 +2227,10 @@ impl<'a> wl_data_device_v3_request_proxy<'a> {
     }
 }
 pub struct wl_data_device_v3_request_start_drag_args {
-    source: ::std::option::Option<crate::ObjectId>,
-    origin: ::std::option::Option<crate::ObjectId>,
-    icon: ::std::option::Option<crate::ObjectId>,
-    serial: u32,
+    pub source: ::std::option::Option<crate::ObjectId>,
+    pub origin: ::std::option::Option<crate::ObjectId>,
+    pub icon: ::std::option::Option<crate::ObjectId>,
+    pub serial: u32,
 }
 impl wl_data_device_v3_request_start_drag_args {
     pub const OPCODE: u16 = 0;
@@ -2280,8 +2280,8 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_data_device_v3_request_start_d
     }
 }
 pub struct wl_data_device_v3_request_set_selection_args {
-    source: ::std::option::Option<crate::ObjectId>,
-    serial: u32,
+    pub source: ::std::option::Option<crate::ObjectId>,
+    pub serial: u32,
 }
 impl wl_data_device_v3_request_set_selection_args {
     pub const OPCODE: u16 = 1;
@@ -2363,7 +2363,7 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_data_device_v3_request_release
     }
 }
 pub struct wl_data_device_v3_event_data_offer_args {
-    id: crate::NewObjectId,
+    pub id: crate::NewObjectId,
 }
 impl wl_data_device_v3_event_data_offer_args {
     pub const OPCODE: u16 = 0;
@@ -2402,11 +2402,11 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_data_device_v3_event_data_offe
     }
 }
 pub struct wl_data_device_v3_event_enter_args {
-    serial: u32,
-    surface: ::std::option::Option<crate::ObjectId>,
-    x: crate::Fixed,
-    y: crate::Fixed,
-    id: ::std::option::Option<crate::ObjectId>,
+    pub serial: u32,
+    pub surface: ::std::option::Option<crate::ObjectId>,
+    pub x: crate::Fixed,
+    pub y: crate::Fixed,
+    pub id: ::std::option::Option<crate::ObjectId>,
 }
 impl wl_data_device_v3_event_enter_args {
     pub const OPCODE: u16 = 1;
@@ -2494,9 +2494,9 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_data_device_v3_event_leave_arg
     }
 }
 pub struct wl_data_device_v3_event_motion_args {
-    time: u32,
-    x: crate::Fixed,
-    y: crate::Fixed,
+    pub time: u32,
+    pub x: crate::Fixed,
+    pub y: crate::Fixed,
 }
 impl wl_data_device_v3_event_motion_args {
     pub const OPCODE: u16 = 3;
@@ -2574,7 +2574,7 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_data_device_v3_event_drop_args
     }
 }
 pub struct wl_data_device_v3_event_selection_args {
-    id: ::std::option::Option<crate::ObjectId>,
+    pub id: ::std::option::Option<crate::ObjectId>,
 }
 impl wl_data_device_v3_event_selection_args {
     pub const OPCODE: u16 = 5;
@@ -2643,7 +2643,7 @@ impl<'a> wl_data_device_manager_v3_request_proxy<'a> {
     }
 }
 pub struct wl_data_device_manager_v3_request_create_data_source_args {
-    id: crate::NewObjectId,
+    pub id: crate::NewObjectId,
 }
 impl wl_data_device_manager_v3_request_create_data_source_args {
     pub const OPCODE: u16 = 0;
@@ -2690,8 +2690,8 @@ impl
     }
 }
 pub struct wl_data_device_manager_v3_request_get_data_device_args {
-    id: crate::NewObjectId,
-    seat: ::std::option::Option<crate::ObjectId>,
+    pub id: crate::NewObjectId,
+    pub seat: ::std::option::Option<crate::ObjectId>,
 }
 impl wl_data_device_manager_v3_request_get_data_device_args {
     pub const OPCODE: u16 = 1;
@@ -2761,8 +2761,8 @@ impl<'a> wl_shell_v1_request_proxy<'a> {
     }
 }
 pub struct wl_shell_v1_request_get_shell_surface_args {
-    id: crate::NewObjectId,
-    surface: ::std::option::Option<crate::ObjectId>,
+    pub id: crate::NewObjectId,
+    pub surface: ::std::option::Option<crate::ObjectId>,
 }
 impl wl_shell_v1_request_get_shell_surface_args {
     pub const OPCODE: u16 = 0;
@@ -3000,7 +3000,7 @@ impl<'a> wl_shell_surface_v1_request_proxy<'a> {
     }
 }
 pub struct wl_shell_surface_v1_request_pong_args {
-    serial: u32,
+    pub serial: u32,
 }
 impl wl_shell_surface_v1_request_pong_args {
     pub const OPCODE: u16 = 0;
@@ -3039,8 +3039,8 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_shell_surface_v1_request_pong_
     }
 }
 pub struct wl_shell_surface_v1_request_move_args {
-    seat: ::std::option::Option<crate::ObjectId>,
-    serial: u32,
+    pub seat: ::std::option::Option<crate::ObjectId>,
+    pub serial: u32,
 }
 impl wl_shell_surface_v1_request_move_args {
     pub const OPCODE: u16 = 1;
@@ -3081,9 +3081,9 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_shell_surface_v1_request_move_
     }
 }
 pub struct wl_shell_surface_v1_request_resize_args {
-    seat: ::std::option::Option<crate::ObjectId>,
-    serial: u32,
-    edges: u32,
+    pub seat: ::std::option::Option<crate::ObjectId>,
+    pub serial: u32,
+    pub edges: u32,
 }
 impl wl_shell_surface_v1_request_resize_args {
     pub const OPCODE: u16 = 2;
@@ -3171,10 +3171,10 @@ impl
     }
 }
 pub struct wl_shell_surface_v1_request_set_transient_args {
-    parent: ::std::option::Option<crate::ObjectId>,
-    x: i32,
-    y: i32,
-    flags: u32,
+    pub parent: ::std::option::Option<crate::ObjectId>,
+    pub x: i32,
+    pub y: i32,
+    pub flags: u32,
 }
 impl wl_shell_surface_v1_request_set_transient_args {
     pub const OPCODE: u16 = 4;
@@ -3230,9 +3230,9 @@ impl
     }
 }
 pub struct wl_shell_surface_v1_request_set_fullscreen_args {
-    method: u32,
-    framerate: u32,
-    output: ::std::option::Option<crate::ObjectId>,
+    pub method: u32,
+    pub framerate: u32,
+    pub output: ::std::option::Option<crate::ObjectId>,
 }
 impl wl_shell_surface_v1_request_set_fullscreen_args {
     pub const OPCODE: u16 = 5;
@@ -3285,12 +3285,12 @@ impl
     }
 }
 pub struct wl_shell_surface_v1_request_set_popup_args {
-    seat: ::std::option::Option<crate::ObjectId>,
-    serial: u32,
-    parent: ::std::option::Option<crate::ObjectId>,
-    x: i32,
-    y: i32,
-    flags: u32,
+    pub seat: ::std::option::Option<crate::ObjectId>,
+    pub serial: u32,
+    pub parent: ::std::option::Option<crate::ObjectId>,
+    pub x: i32,
+    pub y: i32,
+    pub flags: u32,
 }
 impl wl_shell_surface_v1_request_set_popup_args {
     pub const OPCODE: u16 = 6;
@@ -3346,7 +3346,7 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_shell_surface_v1_request_set_p
     }
 }
 pub struct wl_shell_surface_v1_request_set_maximized_args {
-    output: ::std::option::Option<crate::ObjectId>,
+    pub output: ::std::option::Option<crate::ObjectId>,
 }
 impl wl_shell_surface_v1_request_set_maximized_args {
     pub const OPCODE: u16 = 7;
@@ -3391,7 +3391,7 @@ impl
     }
 }
 pub struct wl_shell_surface_v1_request_set_title_args {
-    title: ::std::string::String,
+    pub title: ::std::string::String,
 }
 impl wl_shell_surface_v1_request_set_title_args {
     pub const OPCODE: u16 = 8;
@@ -3430,7 +3430,7 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_shell_surface_v1_request_set_t
     }
 }
 pub struct wl_shell_surface_v1_request_set_class_args {
-    class_: ::std::string::String,
+    pub class_: ::std::string::String,
 }
 impl wl_shell_surface_v1_request_set_class_args {
     pub const OPCODE: u16 = 9;
@@ -3469,7 +3469,7 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_shell_surface_v1_request_set_c
     }
 }
 pub struct wl_shell_surface_v1_event_ping_args {
-    serial: u32,
+    pub serial: u32,
 }
 impl wl_shell_surface_v1_event_ping_args {
     pub const OPCODE: u16 = 0;
@@ -3508,9 +3508,9 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_shell_surface_v1_event_ping_ar
     }
 }
 pub struct wl_shell_surface_v1_event_configure_args {
-    edges: u32,
-    width: i32,
-    height: i32,
+    pub edges: u32,
+    pub width: i32,
+    pub height: i32,
 }
 impl wl_shell_surface_v1_event_configure_args {
     pub const OPCODE: u16 = 1;
@@ -3829,9 +3829,9 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_surface_v6_request_destroy_arg
     }
 }
 pub struct wl_surface_v6_request_attach_args {
-    buffer: ::std::option::Option<crate::ObjectId>,
-    x: i32,
-    y: i32,
+    pub buffer: ::std::option::Option<crate::ObjectId>,
+    pub x: i32,
+    pub y: i32,
 }
 impl wl_surface_v6_request_attach_args {
     pub const OPCODE: u16 = 1;
@@ -3874,10 +3874,10 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_surface_v6_request_attach_args
     }
 }
 pub struct wl_surface_v6_request_damage_args {
-    x: i32,
-    y: i32,
-    width: i32,
-    height: i32,
+    pub x: i32,
+    pub y: i32,
+    pub width: i32,
+    pub height: i32,
 }
 impl wl_surface_v6_request_damage_args {
     pub const OPCODE: u16 = 2;
@@ -3927,7 +3927,7 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_surface_v6_request_damage_args
     }
 }
 pub struct wl_surface_v6_request_frame_args {
-    callback: crate::NewObjectId,
+    pub callback: crate::NewObjectId,
 }
 impl wl_surface_v6_request_frame_args {
     pub const OPCODE: u16 = 3;
@@ -3966,7 +3966,7 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_surface_v6_request_frame_args)
     }
 }
 pub struct wl_surface_v6_request_set_opaque_region_args {
-    region: ::std::option::Option<crate::ObjectId>,
+    pub region: ::std::option::Option<crate::ObjectId>,
 }
 impl wl_surface_v6_request_set_opaque_region_args {
     pub const OPCODE: u16 = 4;
@@ -4011,7 +4011,7 @@ impl
     }
 }
 pub struct wl_surface_v6_request_set_input_region_args {
-    region: ::std::option::Option<crate::ObjectId>,
+    pub region: ::std::option::Option<crate::ObjectId>,
 }
 impl wl_surface_v6_request_set_input_region_args {
     pub const OPCODE: u16 = 5;
@@ -4085,7 +4085,7 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_surface_v6_request_commit_args
     }
 }
 pub struct wl_surface_v6_request_set_buffer_transform_args {
-    transform: i32,
+    pub transform: i32,
 }
 impl wl_surface_v6_request_set_buffer_transform_args {
     pub const OPCODE: u16 = 7;
@@ -4130,7 +4130,7 @@ impl
     }
 }
 pub struct wl_surface_v6_request_set_buffer_scale_args {
-    scale: i32,
+    pub scale: i32,
 }
 impl wl_surface_v6_request_set_buffer_scale_args {
     pub const OPCODE: u16 = 8;
@@ -4169,10 +4169,10 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_surface_v6_request_set_buffer_
     }
 }
 pub struct wl_surface_v6_request_damage_buffer_args {
-    x: i32,
-    y: i32,
-    width: i32,
-    height: i32,
+    pub x: i32,
+    pub y: i32,
+    pub width: i32,
+    pub height: i32,
 }
 impl wl_surface_v6_request_damage_buffer_args {
     pub const OPCODE: u16 = 9;
@@ -4222,8 +4222,8 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_surface_v6_request_damage_buff
     }
 }
 pub struct wl_surface_v6_request_offset_args {
-    x: i32,
-    y: i32,
+    pub x: i32,
+    pub y: i32,
 }
 impl wl_surface_v6_request_offset_args {
     pub const OPCODE: u16 = 10;
@@ -4264,7 +4264,7 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_surface_v6_request_offset_args
     }
 }
 pub struct wl_surface_v6_event_enter_args {
-    output: ::std::option::Option<crate::ObjectId>,
+    pub output: ::std::option::Option<crate::ObjectId>,
 }
 impl wl_surface_v6_event_enter_args {
     pub const OPCODE: u16 = 0;
@@ -4301,7 +4301,7 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_surface_v6_event_enter_args)> 
     }
 }
 pub struct wl_surface_v6_event_leave_args {
-    output: ::std::option::Option<crate::ObjectId>,
+    pub output: ::std::option::Option<crate::ObjectId>,
 }
 impl wl_surface_v6_event_leave_args {
     pub const OPCODE: u16 = 1;
@@ -4338,7 +4338,7 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_surface_v6_event_leave_args)> 
     }
 }
 pub struct wl_surface_v6_event_preferred_buffer_scale_args {
-    factor: i32,
+    pub factor: i32,
 }
 impl wl_surface_v6_event_preferred_buffer_scale_args {
     pub const OPCODE: u16 = 2;
@@ -4383,7 +4383,7 @@ impl
     }
 }
 pub struct wl_surface_v6_event_preferred_buffer_transform_args {
-    transform: u32,
+    pub transform: u32,
 }
 impl wl_surface_v6_event_preferred_buffer_transform_args {
     pub const OPCODE: u16 = 3;
@@ -4529,7 +4529,7 @@ impl<'a> wl_seat_v10_request_proxy<'a> {
     }
 }
 pub struct wl_seat_v10_request_get_pointer_args {
-    id: crate::NewObjectId,
+    pub id: crate::NewObjectId,
 }
 impl wl_seat_v10_request_get_pointer_args {
     pub const OPCODE: u16 = 0;
@@ -4568,7 +4568,7 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_seat_v10_request_get_pointer_a
     }
 }
 pub struct wl_seat_v10_request_get_keyboard_args {
-    id: crate::NewObjectId,
+    pub id: crate::NewObjectId,
 }
 impl wl_seat_v10_request_get_keyboard_args {
     pub const OPCODE: u16 = 1;
@@ -4607,7 +4607,7 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_seat_v10_request_get_keyboard_
     }
 }
 pub struct wl_seat_v10_request_get_touch_args {
-    id: crate::NewObjectId,
+    pub id: crate::NewObjectId,
 }
 impl wl_seat_v10_request_get_touch_args {
     pub const OPCODE: u16 = 2;
@@ -4681,7 +4681,7 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_seat_v10_request_release_args)
     }
 }
 pub struct wl_seat_v10_event_capabilities_args {
-    capabilities: u32,
+    pub capabilities: u32,
 }
 impl wl_seat_v10_event_capabilities_args {
     pub const OPCODE: u16 = 0;
@@ -4720,7 +4720,7 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_seat_v10_event_capabilities_ar
     }
 }
 pub struct wl_seat_v10_event_name_args {
-    name: ::std::string::String,
+    pub name: ::std::string::String,
 }
 impl wl_seat_v10_event_name_args {
     pub const OPCODE: u16 = 1;
@@ -5005,10 +5005,10 @@ impl<'a> wl_pointer_v10_request_proxy<'a> {
     }
 }
 pub struct wl_pointer_v10_request_set_cursor_args {
-    serial: u32,
-    surface: ::std::option::Option<crate::ObjectId>,
-    hotspot_x: i32,
-    hotspot_y: i32,
+    pub serial: u32,
+    pub surface: ::std::option::Option<crate::ObjectId>,
+    pub hotspot_x: i32,
+    pub hotspot_y: i32,
 }
 impl wl_pointer_v10_request_set_cursor_args {
     pub const OPCODE: u16 = 0;
@@ -5093,10 +5093,10 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_pointer_v10_request_release_ar
     }
 }
 pub struct wl_pointer_v10_event_enter_args {
-    serial: u32,
-    surface: ::std::option::Option<crate::ObjectId>,
-    surface_x: crate::Fixed,
-    surface_y: crate::Fixed,
+    pub serial: u32,
+    pub surface: ::std::option::Option<crate::ObjectId>,
+    pub surface_x: crate::Fixed,
+    pub surface_y: crate::Fixed,
 }
 impl wl_pointer_v10_event_enter_args {
     pub const OPCODE: u16 = 0;
@@ -5144,8 +5144,8 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_pointer_v10_event_enter_args)>
     }
 }
 pub struct wl_pointer_v10_event_leave_args {
-    serial: u32,
-    surface: ::std::option::Option<crate::ObjectId>,
+    pub serial: u32,
+    pub surface: ::std::option::Option<crate::ObjectId>,
 }
 impl wl_pointer_v10_event_leave_args {
     pub const OPCODE: u16 = 1;
@@ -5184,9 +5184,9 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_pointer_v10_event_leave_args)>
     }
 }
 pub struct wl_pointer_v10_event_motion_args {
-    time: u32,
-    surface_x: crate::Fixed,
-    surface_y: crate::Fixed,
+    pub time: u32,
+    pub surface_x: crate::Fixed,
+    pub surface_y: crate::Fixed,
 }
 impl wl_pointer_v10_event_motion_args {
     pub const OPCODE: u16 = 2;
@@ -5233,10 +5233,10 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_pointer_v10_event_motion_args)
     }
 }
 pub struct wl_pointer_v10_event_button_args {
-    serial: u32,
-    time: u32,
-    button: u32,
-    state: u32,
+    pub serial: u32,
+    pub time: u32,
+    pub button: u32,
+    pub state: u32,
 }
 impl wl_pointer_v10_event_button_args {
     pub const OPCODE: u16 = 3;
@@ -5286,9 +5286,9 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_pointer_v10_event_button_args)
     }
 }
 pub struct wl_pointer_v10_event_axis_args {
-    time: u32,
-    axis: u32,
-    value: crate::Fixed,
+    pub time: u32,
+    pub axis: u32,
+    pub value: crate::Fixed,
 }
 impl wl_pointer_v10_event_axis_args {
     pub const OPCODE: u16 = 4;
@@ -5362,7 +5362,7 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_pointer_v10_event_frame_args)>
     }
 }
 pub struct wl_pointer_v10_event_axis_source_args {
-    axis_source: u32,
+    pub axis_source: u32,
 }
 impl wl_pointer_v10_event_axis_source_args {
     pub const OPCODE: u16 = 6;
@@ -5401,8 +5401,8 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_pointer_v10_event_axis_source_
     }
 }
 pub struct wl_pointer_v10_event_axis_stop_args {
-    time: u32,
-    axis: u32,
+    pub time: u32,
+    pub axis: u32,
 }
 impl wl_pointer_v10_event_axis_stop_args {
     pub const OPCODE: u16 = 7;
@@ -5443,8 +5443,8 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_pointer_v10_event_axis_stop_ar
     }
 }
 pub struct wl_pointer_v10_event_axis_discrete_args {
-    axis: u32,
-    discrete: i32,
+    pub axis: u32,
+    pub discrete: i32,
 }
 impl wl_pointer_v10_event_axis_discrete_args {
     pub const OPCODE: u16 = 8;
@@ -5485,8 +5485,8 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_pointer_v10_event_axis_discret
     }
 }
 pub struct wl_pointer_v10_event_axis_value120_args {
-    axis: u32,
-    value120: i32,
+    pub axis: u32,
+    pub value120: i32,
 }
 impl wl_pointer_v10_event_axis_value120_args {
     pub const OPCODE: u16 = 9;
@@ -5527,8 +5527,8 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_pointer_v10_event_axis_value12
     }
 }
 pub struct wl_pointer_v10_event_axis_relative_direction_args {
-    axis: u32,
-    direction: u32,
+    pub axis: u32,
+    pub direction: u32,
 }
 impl wl_pointer_v10_event_axis_relative_direction_args {
     pub const OPCODE: u16 = 10;
@@ -5773,9 +5773,9 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_keyboard_v10_request_release_a
     }
 }
 pub struct wl_keyboard_v10_event_keymap_args {
-    format: u32,
-    fd: ::std::os::fd::RawFd,
-    size: u32,
+    pub format: u32,
+    pub fd: ::std::os::fd::RawFd,
+    pub size: u32,
 }
 impl wl_keyboard_v10_event_keymap_args {
     pub const OPCODE: u16 = 0;
@@ -5818,9 +5818,9 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_keyboard_v10_event_keymap_args
     }
 }
 pub struct wl_keyboard_v10_event_enter_args {
-    serial: u32,
-    surface: ::std::option::Option<crate::ObjectId>,
-    keys: ::std::vec::Vec<u8>,
+    pub serial: u32,
+    pub surface: ::std::option::Option<crate::ObjectId>,
+    pub keys: ::std::vec::Vec<u8>,
 }
 impl wl_keyboard_v10_event_enter_args {
     pub const OPCODE: u16 = 1;
@@ -5867,8 +5867,8 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_keyboard_v10_event_enter_args)
     }
 }
 pub struct wl_keyboard_v10_event_leave_args {
-    serial: u32,
-    surface: ::std::option::Option<crate::ObjectId>,
+    pub serial: u32,
+    pub surface: ::std::option::Option<crate::ObjectId>,
 }
 impl wl_keyboard_v10_event_leave_args {
     pub const OPCODE: u16 = 2;
@@ -5909,10 +5909,10 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_keyboard_v10_event_leave_args)
     }
 }
 pub struct wl_keyboard_v10_event_key_args {
-    serial: u32,
-    time: u32,
-    key: u32,
-    state: u32,
+    pub serial: u32,
+    pub time: u32,
+    pub key: u32,
+    pub state: u32,
 }
 impl wl_keyboard_v10_event_key_args {
     pub const OPCODE: u16 = 3;
@@ -5960,11 +5960,11 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_keyboard_v10_event_key_args)> 
     }
 }
 pub struct wl_keyboard_v10_event_modifiers_args {
-    serial: u32,
-    mods_depressed: u32,
-    mods_latched: u32,
-    mods_locked: u32,
-    group: u32,
+    pub serial: u32,
+    pub mods_depressed: u32,
+    pub mods_latched: u32,
+    pub mods_locked: u32,
+    pub group: u32,
 }
 impl wl_keyboard_v10_event_modifiers_args {
     pub const OPCODE: u16 = 4;
@@ -6017,8 +6017,8 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_keyboard_v10_event_modifiers_a
     }
 }
 pub struct wl_keyboard_v10_event_repeat_info_args {
-    rate: i32,
-    delay: i32,
+    pub rate: i32,
+    pub delay: i32,
 }
 impl wl_keyboard_v10_event_repeat_info_args {
     pub const OPCODE: u16 = 5;
@@ -6257,12 +6257,12 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_touch_v10_request_release_args
     }
 }
 pub struct wl_touch_v10_event_down_args {
-    serial: u32,
-    time: u32,
-    surface: ::std::option::Option<crate::ObjectId>,
-    id: i32,
-    x: crate::Fixed,
-    y: crate::Fixed,
+    pub serial: u32,
+    pub time: u32,
+    pub surface: ::std::option::Option<crate::ObjectId>,
+    pub id: i32,
+    pub x: crate::Fixed,
+    pub y: crate::Fixed,
 }
 impl wl_touch_v10_event_down_args {
     pub const OPCODE: u16 = 0;
@@ -6316,9 +6316,9 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_touch_v10_event_down_args)> fo
     }
 }
 pub struct wl_touch_v10_event_up_args {
-    serial: u32,
-    time: u32,
-    id: i32,
+    pub serial: u32,
+    pub time: u32,
+    pub id: i32,
 }
 impl wl_touch_v10_event_up_args {
     pub const OPCODE: u16 = 1;
@@ -6359,10 +6359,10 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_touch_v10_event_up_args)> for 
     }
 }
 pub struct wl_touch_v10_event_motion_args {
-    time: u32,
-    id: i32,
-    x: crate::Fixed,
-    y: crate::Fixed,
+    pub time: u32,
+    pub id: i32,
+    pub x: crate::Fixed,
+    pub y: crate::Fixed,
 }
 impl wl_touch_v10_event_motion_args {
     pub const OPCODE: u16 = 2;
@@ -6471,9 +6471,9 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_touch_v10_event_cancel_args)> 
     }
 }
 pub struct wl_touch_v10_event_shape_args {
-    id: i32,
-    major: crate::Fixed,
-    minor: crate::Fixed,
+    pub id: i32,
+    pub major: crate::Fixed,
+    pub minor: crate::Fixed,
 }
 impl wl_touch_v10_event_shape_args {
     pub const OPCODE: u16 = 5;
@@ -6514,8 +6514,8 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_touch_v10_event_shape_args)> f
     }
 }
 pub struct wl_touch_v10_event_orientation_args {
-    id: i32,
-    orientation: crate::Fixed,
+    pub id: i32,
+    pub orientation: crate::Fixed,
 }
 impl wl_touch_v10_event_orientation_args {
     pub const OPCODE: u16 = 6;
@@ -6746,14 +6746,14 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_output_v4_request_release_args
     }
 }
 pub struct wl_output_v4_event_geometry_args {
-    x: i32,
-    y: i32,
-    physical_width: i32,
-    physical_height: i32,
-    subpixel: i32,
-    make: ::std::string::String,
-    model: ::std::string::String,
-    transform: i32,
+    pub x: i32,
+    pub y: i32,
+    pub physical_width: i32,
+    pub physical_height: i32,
+    pub subpixel: i32,
+    pub make: ::std::string::String,
+    pub model: ::std::string::String,
+    pub transform: i32,
 }
 impl wl_output_v4_event_geometry_args {
     pub const OPCODE: u16 = 0;
@@ -6815,10 +6815,10 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_output_v4_event_geometry_args)
     }
 }
 pub struct wl_output_v4_event_mode_args {
-    flags: u32,
-    width: i32,
-    height: i32,
-    refresh: i32,
+    pub flags: u32,
+    pub width: i32,
+    pub height: i32,
+    pub refresh: i32,
 }
 impl wl_output_v4_event_mode_args {
     pub const OPCODE: u16 = 1;
@@ -6899,7 +6899,7 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_output_v4_event_done_args)> fo
     }
 }
 pub struct wl_output_v4_event_scale_args {
-    factor: i32,
+    pub factor: i32,
 }
 impl wl_output_v4_event_scale_args {
     pub const OPCODE: u16 = 3;
@@ -6936,7 +6936,7 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_output_v4_event_scale_args)> f
     }
 }
 pub struct wl_output_v4_event_name_args {
-    name: ::std::string::String,
+    pub name: ::std::string::String,
 }
 impl wl_output_v4_event_name_args {
     pub const OPCODE: u16 = 4;
@@ -6973,7 +6973,7 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_output_v4_event_name_args)> fo
     }
 }
 pub struct wl_output_v4_event_description_args {
-    description: ::std::string::String,
+    pub description: ::std::string::String,
 }
 impl wl_output_v4_event_description_args {
     pub const OPCODE: u16 = 5;
@@ -7091,10 +7091,10 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_region_v1_request_destroy_args
     }
 }
 pub struct wl_region_v1_request_add_args {
-    x: i32,
-    y: i32,
-    width: i32,
-    height: i32,
+    pub x: i32,
+    pub y: i32,
+    pub width: i32,
+    pub height: i32,
 }
 impl wl_region_v1_request_add_args {
     pub const OPCODE: u16 = 1;
@@ -7142,10 +7142,10 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_region_v1_request_add_args)> f
     }
 }
 pub struct wl_region_v1_request_subtract_args {
-    x: i32,
-    y: i32,
-    width: i32,
-    height: i32,
+    pub x: i32,
+    pub y: i32,
+    pub width: i32,
+    pub height: i32,
 }
 impl wl_region_v1_request_subtract_args {
     pub const OPCODE: u16 = 2;
@@ -7257,9 +7257,9 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_subcompositor_v1_request_destr
     }
 }
 pub struct wl_subcompositor_v1_request_get_subsurface_args {
-    id: crate::NewObjectId,
-    surface: ::std::option::Option<crate::ObjectId>,
-    parent: ::std::option::Option<crate::ObjectId>,
+    pub id: crate::NewObjectId,
+    pub surface: ::std::option::Option<crate::ObjectId>,
+    pub parent: ::std::option::Option<crate::ObjectId>,
 }
 impl wl_subcompositor_v1_request_get_subsurface_args {
     pub const OPCODE: u16 = 1;
@@ -7398,8 +7398,8 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_subsurface_v1_request_destroy_
     }
 }
 pub struct wl_subsurface_v1_request_set_position_args {
-    x: i32,
-    y: i32,
+    pub x: i32,
+    pub y: i32,
 }
 impl wl_subsurface_v1_request_set_position_args {
     pub const OPCODE: u16 = 1;
@@ -7440,7 +7440,7 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_subsurface_v1_request_set_posi
     }
 }
 pub struct wl_subsurface_v1_request_place_above_args {
-    sibling: ::std::option::Option<crate::ObjectId>,
+    pub sibling: ::std::option::Option<crate::ObjectId>,
 }
 impl wl_subsurface_v1_request_place_above_args {
     pub const OPCODE: u16 = 2;
@@ -7479,7 +7479,7 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_subsurface_v1_request_place_ab
     }
 }
 pub struct wl_subsurface_v1_request_place_below_args {
-    sibling: ::std::option::Option<crate::ObjectId>,
+    pub sibling: ::std::option::Option<crate::ObjectId>,
 }
 impl wl_subsurface_v1_request_place_below_args {
     pub const OPCODE: u16 = 3;
@@ -7646,7 +7646,7 @@ impl ::std::convert::TryFrom<(crate::ObjectId, wl_fixes_v1_request_destroy_args)
     }
 }
 pub struct wl_fixes_v1_request_destroy_registry_args {
-    registry: ::std::option::Option<crate::ObjectId>,
+    pub registry: ::std::option::Option<crate::ObjectId>,
 }
 impl wl_fixes_v1_request_destroy_registry_args {
     pub const OPCODE: u16 = 1;

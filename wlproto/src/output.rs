@@ -304,7 +304,7 @@ impl Tokenizer {
 
             arg_structs.push(quote! {
                 pub struct #arg_struct_name {
-                    #( #fields , )*
+                    #( pub #fields , )*
                 }
                 impl #arg_struct_name {
                     pub const OPCODE: u16 = #opcode ;

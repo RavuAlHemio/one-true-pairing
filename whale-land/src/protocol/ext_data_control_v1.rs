@@ -36,7 +36,7 @@ impl<'a> ext_data_control_manager_v1_v1_request_proxy<'a> {
     }
 }
 pub struct ext_data_control_manager_v1_v1_request_create_data_source_args {
-    id: crate::NewObjectId,
+    pub id: crate::NewObjectId,
 }
 impl ext_data_control_manager_v1_v1_request_create_data_source_args {
     pub const OPCODE: u16 = 0;
@@ -83,8 +83,8 @@ impl
     }
 }
 pub struct ext_data_control_manager_v1_v1_request_get_data_device_args {
-    id: crate::NewObjectId,
-    seat: ::std::option::Option<crate::ObjectId>,
+    pub id: crate::NewObjectId,
+    pub seat: ::std::option::Option<crate::ObjectId>,
 }
 impl ext_data_control_manager_v1_v1_request_get_data_device_args {
     pub const OPCODE: u16 = 1;
@@ -290,7 +290,7 @@ impl<'a> ext_data_control_device_v1_v1_request_proxy<'a> {
     }
 }
 pub struct ext_data_control_device_v1_v1_request_set_selection_args {
-    source: ::std::option::Option<crate::ObjectId>,
+    pub source: ::std::option::Option<crate::ObjectId>,
 }
 impl ext_data_control_device_v1_v1_request_set_selection_args {
     pub const OPCODE: u16 = 0;
@@ -378,7 +378,7 @@ impl
     }
 }
 pub struct ext_data_control_device_v1_v1_request_set_primary_selection_args {
-    source: ::std::option::Option<crate::ObjectId>,
+    pub source: ::std::option::Option<crate::ObjectId>,
 }
 impl ext_data_control_device_v1_v1_request_set_primary_selection_args {
     pub const OPCODE: u16 = 2;
@@ -426,7 +426,7 @@ impl
     }
 }
 pub struct ext_data_control_device_v1_v1_event_data_offer_args {
-    id: crate::NewObjectId,
+    pub id: crate::NewObjectId,
 }
 impl ext_data_control_device_v1_v1_event_data_offer_args {
     pub const OPCODE: u16 = 0;
@@ -473,7 +473,7 @@ impl
     }
 }
 pub struct ext_data_control_device_v1_v1_event_selection_args {
-    id: ::std::option::Option<crate::ObjectId>,
+    pub id: ::std::option::Option<crate::ObjectId>,
 }
 impl ext_data_control_device_v1_v1_event_selection_args {
     pub const OPCODE: u16 = 1;
@@ -559,7 +559,7 @@ impl
     }
 }
 pub struct ext_data_control_device_v1_v1_event_primary_selection_args {
-    id: ::std::option::Option<crate::ObjectId>,
+    pub id: ::std::option::Option<crate::ObjectId>,
 }
 impl ext_data_control_device_v1_v1_event_primary_selection_args {
     pub const OPCODE: u16 = 3;
@@ -687,7 +687,7 @@ impl<'a> ext_data_control_source_v1_v1_request_proxy<'a> {
     }
 }
 pub struct ext_data_control_source_v1_v1_request_offer_args {
-    mime_type: ::std::string::String,
+    pub mime_type: ::std::string::String,
 }
 impl ext_data_control_source_v1_v1_request_offer_args {
     pub const OPCODE: u16 = 0;
@@ -773,8 +773,8 @@ impl
     }
 }
 pub struct ext_data_control_source_v1_v1_event_send_args {
-    mime_type: ::std::string::String,
-    fd: ::std::os::fd::RawFd,
+    pub mime_type: ::std::string::String,
+    pub fd: ::std::os::fd::RawFd,
 }
 impl ext_data_control_source_v1_v1_event_send_args {
     pub const OPCODE: u16 = 0;
@@ -931,8 +931,8 @@ impl<'a> ext_data_control_offer_v1_v1_request_proxy<'a> {
     }
 }
 pub struct ext_data_control_offer_v1_v1_request_receive_args {
-    mime_type: ::std::string::String,
-    fd: ::std::os::fd::RawFd,
+    pub mime_type: ::std::string::String,
+    pub fd: ::std::os::fd::RawFd,
 }
 impl ext_data_control_offer_v1_v1_request_receive_args {
     pub const OPCODE: u16 = 0;
@@ -1020,7 +1020,7 @@ impl
     }
 }
 pub struct ext_data_control_offer_v1_v1_event_offer_args {
-    mime_type: ::std::string::String,
+    pub mime_type: ::std::string::String,
 }
 impl ext_data_control_offer_v1_v1_event_offer_args {
     pub const OPCODE: u16 = 0;
