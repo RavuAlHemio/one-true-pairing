@@ -4,6 +4,7 @@ use hmac::{Hmac, Mac};
 use hmac::digest::DynDigest;
 use sha1::Sha1;
 use sha2::{Sha256, Sha512};
+use tracing::warn;
 use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 
@@ -105,10 +106,14 @@ impl TotpParameters {
             }
         }
 
-        let Some(actual_secret) = secret
-            else { return None };
-        let Some(key) = decode_base32(&actual_secret)
-            else { return None };
+        let Some(actual_secret) = secret else {
+            warn!("cannot process a TOTP URI without a secret");
+            return None;
+        };
+        let Some(key) = decode_base32(&actual_secret) else {
+            warn!("cannot process a TOTP URI with a secret that is invalid base-32");
+            return None;
+        };
 
         let url_issuer = if url_issuer_u.len() > 0 {
             zv_to_string(urldecode(url_issuer_u, false))
