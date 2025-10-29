@@ -55,6 +55,5 @@ all the other parameters).
 Note that you must provide an attribute such as _site_ with a unique-per-secret value on the command
 line; otherwise, your only `one-true-pairing` secret will be repeatedly overwritten.
 
-After adding or removing a secret, you will have to restart `one-true-pairing`, as it only
-enumerates secrets on launch. (Changing the OTP secret does not require a restart; the actual secret
-is always requested afresh.)
+Use the _Update menu_ option after adding or deleting secrets. (Changing the OTP secret does not
+require a restart, as the actual secret is always requested afresh.)

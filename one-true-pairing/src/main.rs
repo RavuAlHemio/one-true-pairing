@@ -114,7 +114,7 @@ async fn main() {
 
     // introduce the notifier icon and menu
     let icon = TrayIcon;
-    let menu = ContextMenu::new(secret_name_to_path, clipboard_sender.clone());
+    let menu = ContextMenu::new(RwLock::new(secret_name_to_path), clipboard_sender.clone());
 
     // register them with the session bus
     let object_server = dbus_conn

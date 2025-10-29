@@ -8,18 +8,21 @@ pub(crate) mod proxies;
 
 
 use std::collections::{BTreeMap, HashMap};
+use std::sync::atomic::{AtomicU32, Ordering};
 
 use serde::{Deserialize, Serialize};
+use tokio::sync::RwLock;
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::{debug, error, warn};
 use zbus::object_server::SignalEmitter;
 use zbus::zvariant::{OwnedObjectPath, OwnedValue, Str, Type, Value};
 
-use crate::ClipboardMessage;
+use crate::{ClipboardMessage, SECRET_SESSION};
 use crate::totp::{self, TotpParameters};
 
 
 const MENU_SEPARATOR_ID: i32 = 0x7FFF_FFFE;
+const MENU_UPDATE_ID: i32 = 0x7FFF_FFFD;
 const MENU_EXIT_ID: i32 = 0x7FFF_FFFF;
 
 
@@ -166,24 +169,32 @@ impl TrayIcon {
 }
 
 pub(crate) struct ContextMenu {
-    secret_name_to_path: BTreeMap<String, OwnedObjectPath>,
+    secret_name_to_path: RwLock<BTreeMap<String, OwnedObjectPath>>,
     clipboard_sender: UnboundedSender<ClipboardMessage>,
+    menu_revision: AtomicU32,
 }
 impl ContextMenu {
     pub fn new(
-        secret_name_to_path: BTreeMap<String, OwnedObjectPath>,
+        secret_name_to_path: RwLock<BTreeMap<String, OwnedObjectPath>>,
         clipboard_sender: UnboundedSender<ClipboardMessage>,
     ) -> Self {
         Self {
             secret_name_to_path,
             clipboard_sender,
+            menu_revision: AtomicU32::new(1),
         }
     }
 
-    fn obtain_layout_structure(&self, property_names: &[String]) -> MenuLayout {
+    async fn obtain_layout_structure(&self, property_names: &[String]) -> MenuLayout {
         fn want(property_names: &[String], key: &str) -> bool {
             property_names.is_empty() || property_names.iter().any(|pn| pn == key)
         }
+
+        let secret_name_to_path = {
+            let sntp_guard = self.secret_name_to_path
+                .read().await;
+            (*sntp_guard).clone()
+        };
 
         let mut separator_props = HashMap::new();
         if want(&property_names, "type") {
@@ -193,8 +204,8 @@ impl ContextMenu {
             );
         }
 
-        let mut menu_entries: Vec<OwnedValue> = Vec::with_capacity(self.secret_name_to_path.len() + 2);
-        for (i, secret_name) in self.secret_name_to_path.keys().enumerate() {
+        let mut menu_entries: Vec<OwnedValue> = Vec::with_capacity(secret_name_to_path.len() + 3);
+        for (i, secret_name) in secret_name_to_path.keys().enumerate() {
             let i_i32 = i32::try_from(i).unwrap();
             menu_entries.push(MenuLayout {
                 id: i_i32.checked_add(1).unwrap(),
@@ -220,6 +231,26 @@ impl ContextMenu {
         menu_entries.push(MenuLayout {
             id: MENU_SEPARATOR_ID,
             properties: separator_props.clone(),
+            children: Vec::with_capacity(0),
+        }.try_into().unwrap());
+        menu_entries.push(MenuLayout {
+            id: MENU_UPDATE_ID,
+            properties: {
+                let mut props = HashMap::new();
+                if want(&property_names, "type") {
+                    props.insert(
+                        "type".to_owned(),
+                        Str::from("standard").into(),
+                    );
+                }
+                if want(&property_names, "label") {
+                    props.insert(
+                        "label".to_owned(),
+                        Str::from("_Update menu").into(),
+                    );
+                }
+                props
+            },
             children: Vec::with_capacity(0),
         }.try_into().unwrap());
         menu_entries.push(MenuLayout {
@@ -259,8 +290,8 @@ impl ContextMenu {
         }
     }
 
-    fn obtain_group_properties(&self, ids: &[i32], property_names: &[String]) -> Vec<(i32, HashMap<String, OwnedValue>)> {
-        let layout = self.obtain_layout_structure(&property_names);
+    async fn obtain_group_properties(&self, ids: &[i32], property_names: &[String]) -> Vec<(i32, HashMap<String, OwnedValue>)> {
+        let layout = self.obtain_layout_structure(&property_names).await;
         let mut entries = Vec::new();
         Self::flatten_entries(&layout, &mut entries);
 
@@ -307,12 +338,12 @@ impl ContextMenu {
             ));
         }
 
-        let layout = self.obtain_layout_structure(&property_names);
+        let layout = self.obtain_layout_structure(&property_names).await;
         Ok((0, layout))
     }
 
     async fn get_group_properties(&self, ids: Vec<i32>, property_names: Vec<String>) -> Result<Vec<(i32, HashMap<String, OwnedValue>)>, zbus::fdo::Error> {
-        let props = self.obtain_group_properties(&ids, &property_names);
+        let props = self.obtain_group_properties(&ids, &property_names).await;
         Ok(props)
     }
 
@@ -321,7 +352,7 @@ impl ContextMenu {
     /// This is not useful if you're going to implement this interface, it should only be used if
     /// you're debugging via a commandline tool.
     async fn get_property(&self, id: i32, name: String) -> Result<OwnedValue, zbus::fdo::Error> {
-        let objs_props = self.obtain_group_properties(&[id], &[name.clone()]);
+        let objs_props = self.obtain_group_properties(&[id], &[name.clone()]).await;
         for (id, props) in objs_props {
             for v in props.values() {
                 return Ok(v.clone());
@@ -336,7 +367,14 @@ impl ContextMenu {
     }
 
     /// This is called by the applet to notify the application an event happened on a menu item.
-    async fn event(&self, id: i32, event_id: MenuEvent, data: OwnedValue, timestamp: u32) -> Result<(), zbus::fdo::Error> {
+    async fn event(
+        &self,
+        id: i32,
+        event_id: MenuEvent,
+        data: OwnedValue,
+        timestamp: u32,
+        #[zbus(signal_emitter)] emitter: SignalEmitter<'_>,
+    ) -> Result<(), zbus::fdo::Error> {
         let _ = (data, timestamp);
         if event_id != MenuEvent::Clicked {
             return Ok(());
@@ -351,6 +389,31 @@ impl ContextMenu {
                 self.clipboard_sender.send(ClipboardMessage::Exit);
                 debug!("stopper triggered");
             },
+            MENU_UPDATE_ID => {
+                debug!("update triggered");
+                let new_secrets = {
+                    let secret_session = SECRET_SESSION
+                        .get().expect("SECRET_SESSION not set?!")
+                        .read().await;
+                    secret_session.get_secrets().await
+                };
+
+                debug!("new secrets obtained");
+
+                {
+                    let mut write_guard = self.secret_name_to_path
+                        .write().await;
+                    *write_guard = new_secrets;
+                }
+
+                // notify that everything changed
+                debug!("new secrets stored");
+
+                let new_layout_revision = self.menu_revision.fetch_add(1, Ordering::SeqCst);
+                Self::layout_updated(&emitter, new_layout_revision, 0).await;
+
+                debug!("change notification emitted");
+            },
             index => {
                 let actual_index: usize = match (index - 1).try_into() {
                     Ok(ai) => ai,
@@ -359,7 +422,12 @@ impl ContextMenu {
                         return Ok(());
                     },
                 };
-                let Some(secret_path) = self.secret_name_to_path
+                let secret_name_to_path = {
+                    let sntp_guard = self.secret_name_to_path
+                        .read().await;
+                    (*sntp_guard).clone()
+                };
+                let Some(secret_path) = secret_name_to_path
                     .values()
                     .nth(actual_index)
                     else {
@@ -420,6 +488,7 @@ impl ContextMenu {
     ///
     /// The return value indicates if the menu should be updated first.
     async fn about_to_show(&self, id: i32) -> Result<bool, zbus::fdo::Error> {
+        // unfortunately, this "has been updated" mechanism doesn't actually work
         let _ = id;
         Ok(false)
     }
