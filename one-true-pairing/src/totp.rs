@@ -100,6 +100,11 @@ impl TotpParameters {
             } else if key.as_str() == "period" {
                 let Ok(period_seconds_value): Result<u64, _> = value.parse()
                     else { return None };
+                if period_seconds_value == 0 {
+                    // nice try attempting to trigger a division-by-zero
+                    warn!("refusing to process a TOTP URI with a period of 0");
+                    return None;
+                }
                 period_seconds = Some(period_seconds_value);
             } else {
                 // FIXME: blow up on unknown attributes?
