@@ -31,12 +31,19 @@ secrets provider or Wayland compositor, provided they support the aforementioned
 
 Major dependencies are the `tokio` (for asynchronous I/O) and `zbus` (for D-Bus support) crates.
 
+## Unlocking
+
+`one-true-pairing` currently cannot deal with locked collections (keyrings, wallets, ...) of
+secrets. Run a secrets-management application like
+[GNOME's Passwords and Secrets (Seahorse)](https://gitlab.gnome.org/GNOME/seahorse), unlock your
+collection and then select the _Update menu_ item from the `one-true-pairing` menu.
+
 ## Secrets Management
 
 `one-true-pairing` currently does not include a mechanism to manage secrets. You can use
 `secret-tool` from [GNOME's libsecret](https://gitlab.gnome.org/GNOME/libsecret) to add new secrets:
 
-```
+```bash
 secret-tool store --label='Google' xdg:schema com.ondrahosek.OneTruePairing site google.com
 ```
 
