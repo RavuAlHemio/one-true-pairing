@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 aes = { version = "0.8" }
 cbc = { version = "0.1" }
+clap = { version = "4.5", features = ["derive"] }
 crypto-bigint = { version = "0.6", features = ["alloc"] }
 hkdf = { version = "0.12" }
 hmac = { version = "0.12", features = ["reset"] }

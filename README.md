@@ -7,6 +7,24 @@ Minimal [OTP](https://en.wikipedia.org/wiki/One-time_password) (specifically
 Click on an icon in the notification bar, choose the account from a menu, and the OTP code is copied
 into your clipboard.
 
+## Usage
+
+Simply launch `one-true-pairing`.
+
+By default, `one-true-pairing` assumes that your secrets collection (keyring, wallet, ...) is named
+`Default keyring`. If this is not the case, you can supply a different collection name using the
+`--collection` option, e.g.:
+
+```bash
+one-true-pairing --collection="OTP seeds"
+```
+
+Detailed logging is provided by setting the environment variable `RUST_LOG` to `debug`:
+
+```bash
+RUST_LOG=debug one-true-pairing
+```
+
 ## Architecture
 
 The client:
@@ -29,14 +47,25 @@ The client:
 `one-true-pairing` does not depend on any UI framework and should work independently of your chosen
 secrets provider or Wayland compositor, provided they support the aforementioned APIs.
 
-Major dependencies are the `tokio` (for asynchronous I/O) and `zbus` (for D-Bus support) crates.
+The major dependencies of `one-true-pairing` are the following crates:
+
+* `clap` for command-line parsing
+
+* `tokio` for asynchronous I/O
+
+* `zbus` for D-Bus support
+
+These are generally compiled into the program binary and do not require any additional libraries to
+be installed.
 
 ## Unlocking
 
-`one-true-pairing` currently cannot deal with locked collections (keyrings, wallets, ...) of
-secrets. Run a secrets-management application like
-[GNOME's Passwords and Secrets (Seahorse)](https://gitlab.gnome.org/GNOME/seahorse), unlock your
-collection and then select the _Update menu_ item from the `one-true-pairing` menu.
+On launch, `one-true-pairing` checks if your secrets collection is unlocked. If not, it will request
+that you be prompted to unlock it. Only one such attempt is made; if this attempt fails, you will
+have to restart `one-true-pairing` to obtain another prompt or use a secrets-management application
+like [GNOME's Passwords and Secrets (Seahorse)](https://gitlab.gnome.org/GNOME/seahorse) to unlock
+your collection and then select the _Update menu_ item from the `one-true-pairing` menu to populate
+it with your OTP secrets.
 
 ## Secrets Management
 

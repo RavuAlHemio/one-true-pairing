@@ -6,6 +6,7 @@ mod totp;
 use std::io;
 use std::sync::OnceLock;
 
+use clap::Parser;
 use libc::close;
 use tokio::io::AsyncWriteExt;
 use tokio::sync::RwLock;
@@ -83,6 +84,16 @@ impl WaylandData {
     }
 }
 
+#[derive(Parser)]
+struct Opts {
+    #[arg(
+        short, long,
+        default_value = "Default keyring",
+        help = "Label of the secrets collection (keyring, wallet) to open. Defaults to \"Default keyring\".",
+    )]
+    collection: String,
+}
+
 
 #[tokio::main]
 async fn main() {
@@ -91,6 +102,9 @@ async fn main() {
         .with_writer(std::io::stderr)
         .with_env_filter(EnvFilter::from_default_env())
         .init();
+
+    // read commandline args
+    let opts = Opts::parse();
 
     info!("I have been assigned PID {}", std::process::id());
 
@@ -103,7 +117,7 @@ async fn main() {
 
     // connect to a secret manager and list the secrets
     debug!("querying secret manager");
-    let secret_session = SecretSession::new(dbus_conn.clone()).await;
+    let secret_session = SecretSession::new(dbus_conn.clone(), &opts.collection).await;
     let secret_name_to_path = secret_session.get_secrets().await;
     SECRET_SESSION
         .set(RwLock::new(secret_session))
