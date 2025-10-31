@@ -12,7 +12,7 @@ use zbus::zvariant::{ObjectPath, OwnedObjectPath};
 use zeroize::Zeroizing;
 
 use crate::secrets::crypto::{CryptoAlgorithm, DhIetf1024Sha256Aes128CbcPkcs7Crypto, PlainCrypto};
-use crate::secrets::proxies::{CollectionProxy, ItemProxy, ServiceProxy};
+use crate::secrets::proxies::{CollectionProxy, ItemProxy, PromptProxy, ServiceProxy};
 
 
 #[derive(Debug)]
@@ -22,7 +22,7 @@ pub struct SecretSession {
     session_path: OwnedObjectPath,
 }
 impl SecretSession {
-    pub async fn new(conn: Connection) -> Self {
+    pub async fn new(conn: Connection, collection_label: &str) -> Self {
         let service_proxy = ServiceProxy::new(&conn)
             .await.expect("failed to connect to secrets service");
 
@@ -55,6 +55,46 @@ impl SecretSession {
         }
         let (session_path, algo) = session_algo_opt
             .expect("no supported algorithm found");
+
+        // find our collection
+        debug!("querying collections");
+        let collections = service_proxy.collections()
+            .await.expect("failed to obtain list of collections");
+        let mut wanted_collection_path_opt = None;
+        for collection_path in &collections {
+            let collection_proxy = CollectionProxy::new(&conn, collection_path)
+                .await.expect("failed to obtain collection proxy");
+            let label = collection_proxy.label()
+                .await.expect("failed to request collection label");
+            if label == collection_label {
+                wanted_collection_path_opt = Some(collection_path.clone());
+                break;
+            }
+        }
+        let wanted_collection_path = wanted_collection_path_opt
+            .expect("no collection of secrets found");
+        debug!("found requested collection at {}", wanted_collection_path);
+
+        // unlock if necessary
+        let collection_proxy = CollectionProxy::new(&conn, &wanted_collection_path)
+            .await.expect("failed to re-obtain collection proxy");
+        let collection_is_locked = collection_proxy.locked()
+            .await.expect("failed to find out if collection is locked");
+        if collection_is_locked {
+            debug!("collection is locked");
+            let (unlocked_collections, prompt_path) = service_proxy.unlock(&[wanted_collection_path.as_ref()])
+                .await.expect("failed to request unlock of collection");
+            if unlocked_collections.len() == 0 {
+                // okay, the user must be prompted
+                let prompt_proxy = PromptProxy::new(&conn, &prompt_path)
+                    .await.expect("failed to obtain prompt proxy");
+                debug!("prompting user");
+                prompt_proxy.prompt("")
+                    .await.expect("failed to trigger prompt");
+            }
+        } else {
+            debug!("collection is not locked");
+        }
 
         Self {
             connection: Some(conn),
