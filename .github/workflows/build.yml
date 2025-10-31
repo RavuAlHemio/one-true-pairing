@@ -1,0 +1,134 @@
+name: one-true-pairing build
+on: [push]
+jobs:
+  build-arch-x64:
+    strategy:
+      fail-fast: false
+      matrix:
+        mode:
+          - name: debug
+            flag: ""
+          - name: release
+            flag: "--release"
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    env:
+      RUST_BACKTRACE: 1
+    steps:
+      - name: update packages
+        run: pacman -Syu --noconfirm
+      - name: install packages
+        run: pacman -S --needed --noconfirm cargo git
+      - name: trust repo directory
+        run: git config --global --add safe.directory /__w/one-true-pairing/one-true-pairing
+      - name: check out repository code
+        uses: actions/checkout@v4
+      - name: run ${{ matrix.mode.name }} build
+        run: cargo build --all-targets ${{ matrix.mode.flag }}
+      - name: run ${{ matrix.mode.name }} tests
+        run: cargo test ${{ matrix.mode.flag }}
+      - name: upload o-t-p ${{ matrix.mode.name }} binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: one-true-pairing-arch-${{ matrix.mode.name }}-x64
+          path: |
+            target/${{ matrix.mode.name }}/one-true-pairing
+      - name: upload wlproto ${{ matrix.mode.name }} binary
+        # place it in its own archive
+        # because it's just a byproduct of this project
+        uses: actions/upload-artifact@v4
+        with:
+          name: wlproto-arch-${{ matrix.mode.name }}-x64
+          path: |
+            target/${{ matrix.mode.name }}/wlproto
+  build-ubuntu-x64:
+    strategy:
+      fail-fast: false
+      matrix:
+        ubuntu_version: [jammy, noble, questing]
+        mode:
+          - name: debug
+            flag: ""
+          - name: release
+            flag: "--release"
+    runs-on: ubuntu-latest
+    container: ubuntu:${{ matrix.ubuntu_version }}
+    env:
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
+      DEBIAN_FRONTEND: noninteractive
+      TZ: Etc/UTC
+      RUST_BACKTRACE: 1
+    steps:
+      - name: update apt database
+        run: apt-get -y update
+      - name: update packages
+        run: apt-get -y dist-upgrade
+      - name: install packages
+        run: apt-get -y install curl build-essential git
+      - name: install rustup
+        run: "curl --proto '=https' -sSf https://sh.rustup.rs | sh -s -- -y"
+      - name: trust repo directory
+        run: git config --global --add safe.directory /__w/one-true-pairing/one-true-pairing
+      - name: check out repository code
+        uses: actions/checkout@v4
+      - name: run ${{ matrix.mode.name }} build
+        run: '. $HOME/.cargo/env && cargo build --all-targets ${{ matrix.mode.flag }}'
+      - name: run ${{ matrix.mode.name }} tests
+        run: '. $HOME/.cargo/env && cargo test ${{ matrix.mode.flag }}'
+      - name: upload o-t-p ${{ matrix.mode.name }} binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: one-true-pairing-ubuntu-${{ matrix.ubuntu_version }}-${{ matrix.mode.name }}-x64
+          path: |
+            target/${{ matrix.mode.name }}/one-true-pairing
+      - name: upload wlproto ${{ matrix.mode.name }} binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: wlproto-ubuntu-${{ matrix.ubuntu_version }}-${{ matrix.mode.name }}-x64
+          path: |
+            target/${{ matrix.mode.name }}/wlproto
+  build-fedora-x64:
+    strategy:
+      fail-fast: false
+      matrix:
+        fedora_version: [41, 42, 43]
+        mode:
+          - name: debug
+            flag: ""
+          - name: release
+            flag: "--release"
+    runs-on: ubuntu-latest
+    container: fedora:${{ matrix.fedora_version }}
+    env:
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
+      TZ: Etc/UTC
+      RUST_BACKTRACE: 1
+    steps:
+      - name: update packages
+        run: dnf --assumeyes upgrade
+      - name: install packages
+        run: dnf --assumeyes install curl gcc git
+      - name: install rustup
+        run: "curl --proto '=https' -sSf https://sh.rustup.rs | sh -s -- -y"
+      - name: trust repo directory
+        run: git config --global --add safe.directory /__w/one-true-pairing/one-true-pairing
+      - name: check out repository code
+        uses: actions/checkout@v4
+      - name: run ${{ matrix.mode.name }} build
+        run: '. $HOME/.cargo/env && cargo build --all-targets ${{ matrix.mode.flag }}'
+      - name: run ${{ matrix.mode.name }} tests
+        run: '. $HOME/.cargo/env && cargo test ${{ matrix.mode.flag }}'
+      - name: upload o-t-p ${{ matrix.mode.name }} binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: one-true-pairing-fedora-${{ matrix.fedora_version }}-${{ matrix.mode.name }}-x64
+          path: |
+            target/${{ matrix.mode.name }}/one-true-pairing
+      - name: upload wlproto ${{ matrix.mode.name }} binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: wlproto-fedora-${{ matrix.fedora_version }}-${{ matrix.mode.name }}-x64
+          path: |
+            target/${{ matrix.mode.name }}/wlproto
