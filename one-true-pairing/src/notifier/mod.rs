@@ -475,7 +475,7 @@ impl ContextMenu {
                     period_s,
                     digits,
                 );
-                let otp_code_string = format!("{}", otp_code);
+                let otp_code_string = format!("{0:01$}", otp_code, digits.into());
                 self.clipboard_sender.send(ClipboardMessage::Copy(otp_code_string));
             },
         }
