@@ -223,6 +223,7 @@ fn decode_base32(b32: &str) -> Option<Zeroizing<Vec<u8>>> {
     // check charset
     let charset_ok = b32.bytes().all(|b|
         (b >= b'A' && b <= b'Z')
+        || (b >= b'a' && b <= b'z')
         || (b >= b'2' && b <= b'7')
     );
     if !charset_ok {
@@ -236,6 +237,8 @@ fn decode_base32(b32: &str) -> Option<Zeroizing<Vec<u8>>> {
             value <<= 5;
             if b >= b'A' && b <= b'Z' {
                 value |= u64::from(b - b'A');
+            } else if b >= b'a' && b <= b'z' {
+                value |= u64::from(b - b'a');
             } else {
                 assert!(b >= b'2' && b <= b'7');
                 value |= u64::from(b - b'2' + 26);
