@@ -7,6 +7,7 @@ use std::io;
 use std::sync::OnceLock;
 
 use clap::Parser;
+use futures_util::stream::StreamExt;
 use libc::close;
 use tokio::io::AsyncWriteExt;
 use tokio::sync::RwLock;
@@ -159,8 +160,8 @@ async fn main() {
         .await
         .expect("failed to send wl_display::get_registry packet");
 
-    // find a tray icon host
-    debug!("poking at the icon host");
+    // interact with the icon watcher
+    debug!("introducing myself to the icon watcher");
     let icon_host = StatusNotifierWatcherProxy::new(&dbus_conn)
         .await.expect("failed to connect to icon host");
 
@@ -171,6 +172,10 @@ async fn main() {
     debug!("registering icon");
     icon_host.register_status_notifier_item(dbus_name.to_owned())
         .await.expect("failed to register icon");
+
+    debug!("listening for icon host changes");
+    let mut new_host_stream = icon_host.receive_status_notifier_host_registered()
+        .await.expect("failed to create new-icon-host stream");
 
     let mut wayland_data = WaylandData::new();
     wayland_data.registry_id = Some(registry_id);
@@ -205,6 +210,12 @@ async fn main() {
                         ).await;
                     },
                 }
+            },
+            _ = new_host_stream.next() => {
+                // re-register our icon
+                info!("there is a new icon host");
+                icon_host.register_status_notifier_item(dbus_name.to_owned())
+                    .await.expect("failed to re-register icon");
             },
             way_packet_res = way_conn.recv_packet() => {
                 match way_packet_res {
