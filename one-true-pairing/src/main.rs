@@ -159,21 +159,18 @@ async fn main() {
         .await
         .expect("failed to send wl_display::get_registry packet");
 
-    // scope this so that the icon_host proxy is dropped
-    {
-        // find a tray icon host
-        debug!("poking at the icon host");
-        let icon_host = StatusNotifierWatcherProxy::new(&dbus_conn)
-            .await.expect("failed to connect to icon host");
+    // find a tray icon host
+    debug!("poking at the icon host");
+    let icon_host = StatusNotifierWatcherProxy::new(&dbus_conn)
+        .await.expect("failed to connect to icon host");
 
-        let proto_version = icon_host.protocol_version()
-            .await.expect("failed to obtain protocol version");
-        assert_eq!(proto_version, 0, "we only support protocol version 0, icon host is using a different one");
+    let proto_version = icon_host.protocol_version()
+        .await.expect("failed to obtain protocol version");
+    assert_eq!(proto_version, 0, "we only support protocol version 0, icon host is using a different one");
 
-        debug!("registering icon");
-        icon_host.register_status_notifier_item(dbus_name.to_owned())
-            .await.expect("failed to register icon");
-    }
+    debug!("registering icon");
+    icon_host.register_status_notifier_item(dbus_name.to_owned())
+        .await.expect("failed to register icon");
 
     let mut wayland_data = WaylandData::new();
     wayland_data.registry_id = Some(registry_id);
