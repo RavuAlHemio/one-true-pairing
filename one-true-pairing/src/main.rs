@@ -116,6 +116,10 @@ async fn main() {
         .build()
         .await.expect("failed to build a D-Bus connection");
 
+    // wait until a secret manager is available
+    debug!("waiting, with bated breath, for a secret manager");
+    crate::secrets::wait_for_secret_manager(&dbus_conn).await;
+
     // connect to a secret manager and list the secrets
     debug!("querying secret manager");
     let secret_session = SecretSession::new(dbus_conn.clone(), &opts.collection).await;

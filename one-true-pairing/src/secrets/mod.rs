@@ -6,8 +6,10 @@ mod proxies;
 use std::collections::{BTreeMap, HashMap};
 
 use crypto_bigint::Uint;
+use futures_util::StreamExt;
 use tracing::{debug, error, warn};
 use zbus::Connection;
+use zbus::names::BusName;
 use zbus::zvariant::{ObjectPath, OwnedObjectPath};
 use zeroize::Zeroizing;
 
@@ -177,5 +179,48 @@ impl<const LIMBS: usize> UintExt for Uint<LIMBS> {
             .rev() // order is least-significant limb first
             .flat_map(|limb| limb.0.to_be_bytes())
             .collect()
+    }
+}
+
+/// Waits until a secret manager appears on the bus.
+pub async fn wait_for_secret_manager(
+    dbus_conn: &zbus::connection::Connection,
+) {
+    // first register the change listener, then ask about an existing owner;
+    // this prevents a race condition
+
+    // talk to the bus manager
+    let dbus_proxy = zbus::fdo::DBusProxy::new(&dbus_conn)
+        .await.expect("failed to create D-Bus API proxy");
+
+    // register the change listener
+    let mut new_kid_on_the_block_stream = dbus_proxy.receive_name_owner_changed_with_args(&[
+        (0, "org.freedesktop.secrets"),
+    ])
+        .await.expect("failed to obtain stream waiting for secrets owner change");
+
+    // ask if there (already) is someone there
+    let name_owner = dbus_proxy.get_name_owner(BusName::try_from("org.freedesktop.secrets").unwrap())
+        .await.expect("failed to obtain owner of secrets name");
+    if name_owner.len() > 0 {
+        // nothing to wait for :-)
+        return;
+    }
+
+    loop {
+        let new_kid = new_kid_on_the_block_stream
+            .next().await.expect("new-owner stream ended");
+        let new_kid_args = new_kid
+            .args().expect("failed to obtain new-owner event args");
+        if new_kid_args.name() != "org.freedesktop.secrets" {
+            continue;
+        }
+        if new_kid_args.new_owner().is_none() {
+            // still nobody there
+            continue;
+        }
+
+        // this is it
+        break;
     }
 }
