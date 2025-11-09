@@ -22,6 +22,7 @@ pub struct SecretSession {
     connection: Option<Connection>,
     algo: Box<dyn CryptoAlgorithm>,
     session_path: OwnedObjectPath,
+    collection_path: OwnedObjectPath,
 }
 impl SecretSession {
     pub async fn new(conn: Connection, collection_label: &str) -> Self {
@@ -102,15 +103,15 @@ impl SecretSession {
             connection: Some(conn),
             algo,
             session_path,
+            collection_path: wanted_collection_path,
         }
     }
 
     pub async fn get_secrets(&self) -> BTreeMap<String, OwnedObjectPath> {
-        // TODO: make the choice of keyring configurable
         let collection = CollectionProxy::new(
             self.connection.as_ref().unwrap(),
-            ObjectPath::from_static_str("/org/freedesktop/secrets/collection/Default_5fkeyring").unwrap(),
-        ).await.expect("failed to connect to default keyring");
+            &self.collection_path,
+        ).await.expect("failed to connect to secret collection");
         let mut attributes = HashMap::new();
         attributes.insert(
             "xdg:schema".to_owned(),
