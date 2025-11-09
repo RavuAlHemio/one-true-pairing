@@ -240,6 +240,10 @@ async fn main() {
 
     debug!("stopper passed");
 
+    // drop anything that depends on the D-Bus connection
+    drop(new_host_stream);
+    drop(icon_host);
+
     // drop our copy of the D-Bus connection
     drop(dbus_conn);
 
