@@ -274,9 +274,14 @@ impl ContextMenu {
             children: Vec::with_capacity(0),
         }.try_into().unwrap());
 
+        let mut top_properties = HashMap::new();
+        top_properties.insert(
+            "children-display".to_owned(),
+            Str::from("submenu").into(),
+        );
         MenuLayout {
             id: 0,
-            properties: HashMap::new(),
+            properties: top_properties,
             children: menu_entries,
         }
     }
