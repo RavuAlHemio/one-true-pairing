@@ -92,8 +92,19 @@ impl SecretSession {
                 let prompt_proxy = PromptProxy::new(&conn, &prompt_path)
                     .await.expect("failed to obtain prompt proxy");
                 debug!("prompting user");
-                prompt_proxy.prompt("")
-                    .await.expect("failed to trigger prompt");
+                prompt_proxy
+                    .prompt("").await.expect("failed to trigger prompt");
+                let mut completion_stream = prompt_proxy
+                    .receive_completed().await.expect("failed to obtain prompt completion stream");
+                let completion = completion_stream
+                    .next().await.expect("failed to receive prompt completion item");
+                let completion_args = completion
+                    .args().expect("failed to decice prompt completion signal arguments");
+                if completion_args.dismissed {
+                    warn!("user dismissed unlock prompt");
+                } else {
+                    debug!("user completed unlock prompt");
+                }
             }
         } else {
             debug!("collection is not locked");
