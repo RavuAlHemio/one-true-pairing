@@ -44,7 +44,7 @@ pub async fn wait_for_object(
             .next().await.expect("new-owner stream ended");
         let new_kid_args = new_kid
             .args().expect("failed to obtain new-owner event args");
-        if new_kid_args.name() != "org.freedesktop.secrets" {
+        if new_kid_args.name() != object_name.as_str() {
             continue;
         }
         if new_kid_args.new_owner().is_none() {
