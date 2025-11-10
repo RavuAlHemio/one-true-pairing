@@ -1,3 +1,4 @@
+mod dbus_utils;
 mod notifier;
 mod secrets;
 mod totp;
@@ -36,6 +37,7 @@ use whale_land::protocol::wayland::{
     wl_seat_v10_event_name_args,
 };
 use zbus;
+use zbus::names::BusName;
 
 use crate::notifier::{ContextMenu, TrayIcon};
 use crate::notifier::proxies::StatusNotifierWatcherProxy;
@@ -118,7 +120,10 @@ async fn main() {
 
     // wait until a secret manager is available
     debug!("waiting, with bated breath, for a secret manager");
-    crate::secrets::wait_for_secret_manager(&dbus_conn).await;
+    crate::dbus_utils::wait_for_object(
+        &dbus_conn,
+        BusName::try_from("org.freedesktop.secrets").unwrap(),
+    ).await;
 
     // connect to a secret manager and list the secrets
     debug!("querying secret manager");
@@ -165,6 +170,12 @@ async fn main() {
         .expect("failed to send wl_display::get_registry packet");
 
     // interact with the icon watcher
+    debug!("waiting, with bated breath, for an icon watcher");
+    crate::dbus_utils::wait_for_object(
+        &dbus_conn,
+        BusName::try_from("org.kde.StatusNotifierWatcher").unwrap(),
+    ).await;
+
     debug!("introducing myself to the icon watcher");
     let icon_host = StatusNotifierWatcherProxy::new(&dbus_conn)
         .await.expect("failed to connect to icon host");
