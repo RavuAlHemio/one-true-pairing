@@ -4,7 +4,9 @@ mod secrets;
 mod totp;
 
 
+use std::fs::OpenOptions;
 use std::io;
+use std::path::PathBuf;
 use std::sync::OnceLock;
 
 use clap::Parser;
@@ -89,6 +91,9 @@ impl WaylandData {
 
 #[derive(Parser)]
 struct Opts {
+    #[arg(long, help = "Log to a file instead of stderr.")]
+    log_to_file: Option<PathBuf>,
+
     #[arg(
         short, long,
         default_value = "Default keyring",
@@ -98,16 +103,32 @@ struct Opts {
 }
 
 
+macro_rules! set_up_tracing {
+    ($make_writer:expr) => {
+        tracing_subscriber::fmt()
+            .with_writer($make_writer)
+            .with_env_filter(EnvFilter::from_default_env())
+            .init()
+    };
+}
+
+
 #[tokio::main]
 async fn main() {
-    // set up tracing
-    tracing_subscriber::fmt()
-        .with_writer(std::io::stderr)
-        .with_env_filter(EnvFilter::from_default_env())
-        .init();
-
     // read commandline args
     let opts = Opts::parse();
+
+    // set up tracing
+    if let Some(log_to_file) = opts.log_to_file.as_deref() {
+        let log_file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(log_to_file)
+            .expect("failed to open/create log file");
+        set_up_tracing!(log_file);
+    } else {
+        set_up_tracing!(std::io::stderr);
+    };
 
     info!("I have been assigned PID {}", std::process::id());
 
